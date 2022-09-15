@@ -1,7 +1,6 @@
 package err2_test
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -21,15 +20,15 @@ func boolIntStrNoThrow() (bool, int, string, error) { return true, 1, "test", ni
 func noThrow() (string, error)                      { return "test", nil }
 
 func recursion(a int) (r int, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err, nil)
 
 	if a == 0 {
 		return 0, nil
 	}
-	s := try.To1(noThrow())
-	err2.Check(err)
+	s := try.Check1(noThrow())
+	try.Check(err)
 	_ = s
-	r = try.To1(recursion(a - 1))
+	r = try.Check1(recursion(a - 1))
 	r += a
 	return r, nil
 }
@@ -38,7 +37,7 @@ func cleanRecursion(a int) int {
 	if a == 0 {
 		return 0
 	}
-	s := try.To1(noThrow())
+	s := try.Check1(noThrow())
 	_ = s
 	return a + cleanRecursion(a-1)
 }
@@ -64,17 +63,17 @@ func noErr() error {
 }
 
 func TestTry_noError(t *testing.T) {
-	try.To1(noThrow())
-	try.To2(twoStrNoThrow())
-	try.To2(intStrNoThrow())
-	try.To3(boolIntStrNoThrow())
+	try.Check1(noThrow())
+	try.Check2(twoStrNoThrow())
+	try.Check2(intStrNoThrow())
+	try.Check3(boolIntStrNoThrow())
 }
 
 func TestDefault_Error(t *testing.T) {
 	var err error
-	defer err2.Return(&err)
+	defer err2.Handle(&err, nil)
 
-	try.To1(throw())
+	try.Check1(throw())
 
 	t.Fail() // If everything works we are newer here
 }
@@ -83,7 +82,7 @@ func TestTry_Error(t *testing.T) {
 	var err error
 	defer err2.Handle(&err, func() {})
 
-	try.To1(throw())
+	try.Check1(throw())
 
 	t.Fail() // If everything works we are newer here
 }
@@ -226,7 +225,7 @@ func TestPanicking_Return(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Return(&err)
+					defer err2.Handle(&err, nil)
 					panic("panic")
 				},
 			},
@@ -236,7 +235,7 @@ func TestPanicking_Return(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Return(&err)
+					defer err2.Handle(&err, nil)
 					var b []byte
 					b[0] = 0
 				},
@@ -302,70 +301,26 @@ func TestCatch_Error(t *testing.T) {
 		//fmt.Printf("error and defer handling:%s\n", err)
 	})
 
-	try.To1(throw())
+	try.Check1(throw())
 
 	t.Fail() // If everything works we are newer here
 }
 
-func ExampleFilterTry() {
-	copyStream := func(src string) (s string, err error) {
-		defer err2.Returnf(&err, "copy stream %s", src)
-
-		in := bytes.NewBufferString(src)
-		tmp := make([]byte, 4)
-		var out bytes.Buffer
-		for n, err := in.Read(tmp); !err2.FilterTry(io.EOF, err); n, err = in.Read(tmp) {
-			out.Write(tmp[:n])
-		}
-
-		return out.String(), nil
-	}
-
-	str, err := copyStream("testing string")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(str)
-	// Output: testing string
-}
-
-func ExampleTryEOF() {
-	copyStream := func(src string) (s string, err error) {
-		defer err2.Returnf(&err, "copy stream %s", src)
-
-		in := bytes.NewBufferString(src)
-		tmp := make([]byte, 4)
-		var out bytes.Buffer
-		for n, err := in.Read(tmp); !err2.TryEOF(err); n, err = in.Read(tmp) {
-			out.Write(tmp[:n])
-		}
-
-		return out.String(), nil
-	}
-
-	str, err := copyStream("testing string")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(str)
-	// Output: testing string
-}
-
 func Example_copyFile() {
 	copyFile := func(src, dst string) (err error) {
-		defer err2.Returnf(&err, "copy %s %s", src, dst)
+		defer err2.Handlef(&err, "copy %s %s", src, dst)
 
 		// These try.To() checkers are as fast as `if err != nil {}`
 
-		r := try.To1(os.Open(src))
+		r := try.Check1(os.Open(src))
 		defer r.Close()
 
-		w := try.To1(os.Create(dst))
-		defer err2.Handle(&err, func() {
+		rmFile := try.Cleanup(func() {
 			os.Remove(dst)
 		})
+		w := try.Try1(os.Create(dst))(rmFile)
 		defer w.Close()
-		try.To1(io.Copy(w, r))
+		_ = try.Try1(io.Copy(w, r))(rmFile, try.Fmt("copy failure"))
 		return nil
 	}
 
@@ -376,17 +331,17 @@ func Example_copyFile() {
 	// Output: copy /notfound/path/file.go /notfound/path/file.bak: open /notfound/path/file.go: no such file or directory
 }
 
-func ExampleReturn() {
+func ExampleHandle() {
 	var err error
-	defer err2.Return(&err)
-	try.To1(noThrow())
+	defer err2.Handle(&err, nil)
+	try.Check1(noThrow())
 	// Output:
 }
 
-func ExampleAnnotate() {
+func ExampleHandlef() {
 	annotated := func() (err error) {
-		defer err2.Annotate("annotated", &err)
-		try.To1(throw())
+		defer err2.Handlef(&err, "annotated")
+		try.Check1(throw())
 		return err
 	}
 	err := annotated()
@@ -394,10 +349,10 @@ func ExampleAnnotate() {
 	// Output: annotated: this is an ERROR
 }
 
-func ExampleReturnf() {
+func ExampleHandlef_format_args() {
 	annotated := func() (err error) {
-		defer err2.Returnf(&err, "annotated: %s", "err2")
-		try.To1(throw())
+		defer err2.Handlef(&err, "annotated: %s", "err2")
+		try.Check1(throw())
 		return err
 	}
 	err := annotated()
@@ -405,14 +360,14 @@ func ExampleReturnf() {
 	// Output: annotated: err2: this is an ERROR
 }
 
-func ExampleThrowf() {
+func ExampleHandlef_panic() {
 	type fn func(v int) int
 	var recursion fn
 	const recursionLimit = 77 // 12+11+10+9+8+7+6+5+4+3+2+1 = 78
 
 	recursion = func(i int) int {
 		if i > recursionLimit { // simulated error case
-			err2.Throwf("helper failed at: %d", i)
+			panic(fmt.Errorf("helper failed at: %d", i))
 		} else if i == 0 {
 			return 0 // recursion without error ends here
 		}
@@ -420,7 +375,7 @@ func ExampleThrowf() {
 	}
 
 	annotated := func() (err error) {
-		defer err2.Returnf(&err, "annotated: %s", "err2")
+		defer err2.Handlef(&err, "annotated: %s", "err2")
 
 		r := recursion(12) // call recursive algorithm successfully
 		recursion(r)       // call recursive algorithm unsuccessfully
@@ -431,24 +386,24 @@ func ExampleThrowf() {
 	// Output: annotated: err2: helper failed at: 78
 }
 
-func ExampleAnnotate_deferStack() {
+func ExampleHandlef_deferStack() {
 	annotated := func() (err error) {
-		defer err2.Annotate("annotated 2nd", &err)
-		defer err2.Annotate("annotated 1st", &err)
-		try.To1(throw())
+		defer err2.Handlef(&err, "3rd")
+		defer err2.Handlef(&err, "2nd")
+		_ = try.Try1(throw())(try.Fmt("1st"))
 		return err
 	}
 	err := annotated()
 	fmt.Printf("%v", err)
-	// Output: annotated 2nd: annotated 1st: this is an ERROR
+	// Output: 3rd: 2nd: 1st: this is an ERROR
 }
 
-func ExampleHandle() {
+func ExampleHandle_with_handler() {
 	doSomething := func(a, b int) (err error) {
 		defer err2.Handle(&err, func() {
 			err = fmt.Errorf("error with (%d, %d): %v", a, b, err)
 		})
-		try.To1(throw())
+		try.Check1(throw())
 		return err
 	}
 	err := doSomething(1, 2)
@@ -467,46 +422,46 @@ func BenchmarkOldErrorCheckingWithIfClause(b *testing.B) {
 
 func BenchmarkOriginalTry(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		err2.Try(noThrow()) // we show here what can take time
+		_ = try.Check1(noThrow()) // we show here what can take time
 	}
 }
 
 func BenchmarkTry_ErrVar(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := noThrow()
-		try.To(err)
+		try.Check(err)
 	}
 }
 
 func BenchmarkTry_StringGenerics(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_ = try.To1(noThrow())
+		_ = try.Check1(noThrow())
 	}
 }
 
 func BenchmarkTry_StrStrGenerics(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_, _ = try.To2(twoStrNoThrow())
+		_, _ = try.Check2(twoStrNoThrow())
 	}
 }
 
 func BenchmarkCheckInsideCall(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		err2.Check(noErr())
+		try.Check(noErr())
 	}
 }
 
 func BenchmarkCheckVarCall(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		err := noErr()
-		err2.Check(err)
+		try.Check(err)
 	}
 }
 
 func BenchmarkCheck_ErrVar(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := noThrow()
-		err2.Check(err)
+		try.Check(err)
 	}
 }
 

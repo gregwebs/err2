@@ -1,29 +1,36 @@
 /*
-Package try is a package for try.ToX functions that implement the error
-checking. try.ToX functions check 'if err != nil' and if it throws the err to the
-error handlers, which are implemented by the err2 package. More information
-about err2 and try packager roles can be seen in the FileCopy example:
-  ...
-  r := try.To1(os.Open(src))
-  defer r.Close()
+Package try is a package for reducing error handling verbosity
 
-  w := try.To1(os.Create(dst))
-  defer err2.Handle(&err, func() {
-       os.Remove(dst)
-  })
-  defer w.Close()
-  try.To1(io.Copy(w, r))
-  return nil
-  ...
+Instead of 'x, err := f(); if err != nil { return handler(err) }'
+One writes: 'x := Try1(f(), handler)
 
-All of the try package functions are as fast as the simple 'if err != nil {'
+If the error is not nil it is automatically thrown via panic.
+It is then caught by 'Handle'
+
+	  import (
+		"github.com/gregwebs/err2"
+		_ "github.com/gregwebs/try"
+	  )
+
+	  func do() (err error) {
+	    defer err2.Handlew(&err, "do")
+
+	    x := Try1(f())(Formatw("called f"))
+	  }
+
+Package try is a package for try.TryX functions that implement the error
+checking. try.TryX functions check 'if err != nil' and if it throws the err to the
+error handlers, which are implemented by the err2 package.
+
+All of the try package functions should be as fast as the simple 'if err != nil {'
 statement, thanks to the compiler inlining and optimization.
+Currently though there is an
 
 Note that try.ToX function names end to a number (x) because:
 
- "No variadic type parameters. There is no support for variadic type parameters,
- which would permit writing a single generic function that takes different
- numbers of both type parameters and regular parameters." - Go Generics
+	"No variadic type parameters. There is no support for variadic type parameters,
+	which would permit writing a single generic function that takes different
+	numbers of both type parameters and regular parameters." - Go Generics
 
 The leading number at the end of the To2 tells that To2 takes two different
 non-error arguments, and the third one must be an error value.
@@ -38,79 +45,128 @@ If more is needed, let us know.
 package try
 
 import (
-	"errors"
-	"io"
+	"fmt"
 )
 
-// To is a helper function to call functions which returns (error)
-// and check the error value. If an error occurs, it panics the error where err2
-// handlers can catch it if needed.
-func To(err error) {
+type ErrorMap func(error) error
+
+func Fmtw(format string, args ...any) ErrorMap {
+	return func(err error) error {
+		args = append(args, err)
+		return fmt.Errorf(format+": %w", args...)
+	}
+}
+
+func Fmt(format string, args ...any) ErrorMap {
+	return func(err error) error {
+		args = append(args, err)
+		return fmt.Errorf(format+": %v", args...)
+	}
+}
+
+func Cleanup(handler func()) ErrorMap {
+	return func(err error) error {
+		handler()
+		return err
+	}
+}
+
+func Then[E, F, G error](e1 func(E) F, e2 func(F) G) func(E) G {
+	return func(err E) G { return e2(e1(err)) }
+}
+
+func (e1 ErrorMap) Then(e2 func(error) error) ErrorMap {
+	return func(err error) error { return e2(e1(err)) }
+}
+
+// Try is a helper function to immediately return error values without adding an if statement with a return.
+// If the error value is non-nil, the handler function will be applied to it first.
+// Then the non-nil error will be given to panic.
+// You must use err2.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
+func Try[E error](errE E) func(func(E) error, ...func(error) error) {
+	return func(handler func(E) error, handlers ...func(error) error) {
+		if error(errE) != nil {
+			if handler == nil {
+				panic(errE)
+			}
+			errHandled := handler(errE)
+			var err error
+			// This both handles the fact that we allow cleanup functions
+			// that intentionally return nil,
+			// and doesn't allow a handler to accidentally eliminate the error by returning nil
+			if error(errHandled) != nil {
+				err = errHandled
+			}
+
+			for _, handler := range handlers {
+				if handler == nil {
+					continue
+				}
+				errHandled := handler(err)
+				// This both handles the fact that we allow cleanup functions
+				// that intentionally return nil,
+				// and doesn't allow a handler to accidentally eliminate the error by returning nil
+				if error(errHandled) != nil {
+					err = errHandled
+				}
+			}
+			panic(err)
+		}
+	}
+}
+
+func Try1[T any, E error](v T, err E) func(func(E) error, ...func(error) error) T {
+	return func(handler func(E) error, handlers ...func(error) error) T {
+		if error(err) != nil {
+			Try[E](err)(handler, handlers...)
+		}
+
+		return v
+	}
+}
+
+func Try2[T, U any, E error](v1 T, v2 U, err E) func(func(E) error, ...func(error) error) (T, U) {
+	return func(handler func(E) error, handlers ...func(error) error) (T, U) {
+		if error(err) != nil {
+			Try[E](err)(handler, handlers...)
+		}
+		return v1, v2
+	}
+}
+
+func Try3[T, U, V any, E error](v1 T, v2 U, v3 V, err E) func(func(E) error, ...func(error) error) (T, U, V) {
+	return func(handler func(E) error, handlers ...func(error) error) (T, U, V) {
+		if error(err) != nil {
+			Try[E](err)(handler, handlers...)
+		}
+		return v1, v2, v3
+	}
+}
+
+// Check is a helper function to immediately return error values without adding an if statement with a return.
+// If an error occurs, it panics the error.
+// You must use err2.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
+// the Try... functions an be used instead of Check... to add an error handler
+func Check(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-// To1 is a helper function to call functions which returns (any, error)
-// and check the error value. If an error occurs, it panics the error where err2
-// handlers can catch it if needed.
-func To1[T any](v T, err error) T {
-	To(err)
+// Check1 is the same as Check but passes along one extra value
+func Check1[T any](v T, err error) T {
+	Check(err)
 	return v
 }
 
-// To2 is a helper function to call functions which returns (any, any, error)
-// and check the error value. If an error occurs, it panics the error where err2
-// handlers can catch it if needed.
-func To2[T, U any](v1 T, v2 U, err error) (T, U) {
-	To(err)
+// Check2 is the same as Check but passes along two extra values
+func Check2[T, U any](v1 T, v2 U, err error) (T, U) {
+	Check(err)
 	return v1, v2
 }
 
-// To3 is a helper function to call functions which returns (any, any, any, error)
-// and check the error value. If an error occurs, it panics the error where err2
-// handlers can catch it if needed.
-func To3[T, U, V any](v1 T, v2 U, v3 V, err error) (T, U, V) {
-	To(err)
+// Check2 is the same as Check but passes along three extra values
+func Check3[T, U, V any](v1 T, v2 U, v3 V, err error) (T, U, V) {
+	Check(err)
 	return v1, v2, v3
-}
-
-// Is-function performs a filtered error check for the given argument. It's the
-// same as To-function, but it checks if the error matches the filter before
-// throwing an error. The false return value tells that there are no errors and
-// the true value that the error is the filter.
-func Is(err, filter error) bool {
-	if err != nil {
-		if errors.Is(err, filter) {
-			return true
-		}
-		panic(err)
-	}
-	return false
-}
-
-// IsEOF1-function performs a filtered error check for the given argument. It's the
-// same as To-function, but it checks if the error matches the 'io.EOF' before
-// throwing an error. The false return value tells that there are no errors and
-// the true value that the error is the 'io.EOF'.
-func IsEOF1[T any](v T, err error) (bool, T) {
-	isFilter := Is(err, io.EOF)
-	return isFilter, v
-}
-
-// IsEOF2-function performs a filtered error check for the given argument. It's the
-// same as To-function, but it checks if the error matches the 'io.EOF' before
-// throwing an error. The false return value tells that there are no errors and
-// the true value that the error is the 'io.EOF'.
-func IsEOF2[T, U any](v1 T, v2 U, err error) (bool, T, U) {
-	isFilter := Is(err, io.EOF)
-	return isFilter, v1, v2
-}
-
-// IsEOF-function performs a filtered error check for the given argument. It's the
-// same as To-function, but it checks if the error matches the 'io.EOF' before
-// throwing an error. The false return value tells that there are no errors and
-// the true value that the error is the 'io.EOF'.
-func IsEOF(err error) bool {
-	return Is(err, io.EOF)
 }
