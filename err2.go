@@ -28,21 +28,6 @@ func Handle(err *error, handlerFn func()) {
 	handleRecover(r, err, handlerFn)
 }
 
-// Return is the same as Handle but it's for functions that don't wrap or
-// annotate their errors. It's still needed to break panicking which is used for
-// error transport in err2. If you want to annotate errors see other Annotate
-// and Return functions for more information.
-func Return(err *error) {
-	// We need to call `recover` here because of how it works with defer.
-	r := recover()
-
-	handler.Process(handler.Info{
-		Trace:        StackTraceWriter,
-		Any:          r,
-		ErrorHandler: func(e error) { *err = e },
-	})
-}
-
 // Handlef is for annotating an error.
 // It's similar to Annotate but it appends ": %v" to the format string
 func Handlef(err *error, prefix string, args ...any) {
@@ -70,26 +55,32 @@ func handleRecover(r any, err *error, handlerFn func()) {
 	// We put real panic objects back and keep only those which are
 	// carrying our errors. We must also call all of the handlers in defer
 	// stack.
-	handler.Process(handler.Info{
-		Trace: StackTraceWriter,
-		Any:   r,
-		NilHandler: func() {
-			// Defers are in the stack and the first from the stack gets the
-			// opportunity to get panic object's error (below). We still must
-			// call handler functions to the rest of the handlers if there is
-			// an error.
-			if *err != nil && handlerFn != nil {
+	if handlerFn == nil {
+		handler.Process(handler.Info{
+			Trace:        StackTraceWriter,
+			Any:          r,
+			ErrorHandler: func(e error) { *err = e },
+		})
+	} else {
+		handler.Process(handler.Info{
+			Trace: StackTraceWriter,
+			Any:   r,
+			NilHandler: func() {
+				// Defers are in the stack and the first from the stack gets the
+				// opportunity to get panic object's error (below). We still must
+				// call handler functions to the rest of the handlers if there is
+				// an error.
+				if *err != nil {
+					handlerFn()
+				}
+			},
+			ErrorHandler: func(e error) {
+				// We or someone did transport this error thru panic.
+				*err = e
 				handlerFn()
-			}
-		},
-		ErrorHandler: func(e error) {
-			// We or someone did transport this error thru panic.
-			*err = e
-			if handlerFn != nil {
-				handlerFn()
-			}
-		},
-	})
+			},
+		})
+	}
 }
 
 // Catch is a convenient helper to those functions that doesn't return errors.
