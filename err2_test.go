@@ -58,6 +58,56 @@ func recursionWithErrorCheck(a int) (int, error) {
 	return a + v, nil
 }
 
+func errHandlefOnly() (err error) {
+	defer err2.Handlef(&err, "handle top")
+	defer err2.Handlef(&err, "handle error")
+	_ = try.Check1(throw())
+	defer err2.Handlef(&err, "handle error")
+	_ = try.Check1(throw())
+	defer err2.Handlef(&err, "handle error")
+	_ = try.Check1(throw())
+	return err
+}
+
+func errTry1_Fmt() (err error) {
+	defer err2.Handlef(&err, "handle top")
+	// _ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	_ = try.Try1(throw())(try.Fmt("handle error"))
+	_ = try.Try1(throw())(try.Fmt("handle error"))
+	_ = try.Try1(throw())(try.Fmt("handle error"))
+	return err
+}
+
+func errId(err error) error { return err }
+func empty() {}
+
+func errTry1_id() (err error) {
+	defer err2.Handlef(&err, "handle top")
+	_ = try.Try1(throw())(errId)
+	_ = try.Try1(throw())(errId)
+	_ = try.Try1(throw())(errId)
+	return err
+}
+
+func errHandle_Only() (err error) {
+	defer err2.Handlef(&err, "handle top")
+	defer err2.Handle(&err, empty)
+	_ = try.Check1(throw())
+	defer err2.Handle(&err, empty)
+	_ = try.Check1(throw())
+	defer err2.Handle(&err, empty)
+	_ = try.Check1(throw())
+	return err
+}
+
+func errTry1_inlineHandler() (err error) {
+	defer err2.Handlef(&err, "handle top")
+	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	return err
+}
+
 func noErr() error {
 	return nil
 }
@@ -420,47 +470,58 @@ func BenchmarkOldErrorCheckingWithIfClause(b *testing.B) {
 	}
 }
 
-func BenchmarkOriginalTry(b *testing.B) {
+func Benchmark_Err_HandleNil(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		errHandle_Only()
+	}
+}
+
+func Benchmark_Err_Try1_id(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		errTry1_id()
+	}
+}
+
+func Benchmark_Err_HandlersOnly(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		errHandlefOnly()
+	}
+}
+
+func Benchmark_Err_Try1_Fmt(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		errTry1_Fmt()
+	}
+}
+
+func Benchmark_NoErr_Check1(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_ = try.Check1(noThrow()) // we show here what can take time
 	}
 }
 
-func BenchmarkTry_ErrVar(b *testing.B) {
+func Benchmark_NoErr2_Check_NilErr(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := noThrow()
 		try.Check(err)
 	}
 }
 
-func BenchmarkTry_StringGenerics(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		_ = try.Check1(noThrow())
-	}
-}
-
-func BenchmarkTry_StrStrGenerics(b *testing.B) {
+func Benchmark_NoErr_Check2(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, _ = try.Check2(twoStrNoThrow())
 	}
 }
 
-func BenchmarkCheckInsideCall(b *testing.B) {
+func Benchmark_NoErr_Check(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		try.Check(noErr())
 	}
 }
 
-func BenchmarkCheckVarCall(b *testing.B) {
+func Benchmark_NoErr_Check_NilErr(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		err := noErr()
-		try.Check(err)
-	}
-}
-
-func BenchmarkCheck_ErrVar(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		_, err := noThrow()
 		try.Check(err)
 	}
 }
