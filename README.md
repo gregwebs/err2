@@ -6,14 +6,14 @@ Instead of the traditional:
 ``` go
 x, err := f()
 if err != nil {
-	return err
+	return fmt.Sprintf("annotate %v", err)
 }
 ```
 
 You can write:
 
 ``` go
-x := try.Check1(f())
+x := try.Try1(f())(try.Fmt("annotate"))
 ```
 
 ## Fork
@@ -31,32 +31,9 @@ err3 has the following package structure:
 - The `err3/try` package offers error checking functions.
 
 
-## Error handling
-
-Every function which uses err3 for error-checking should have at least one
-`err3.Handle*` function declared with `defer`. If this is ommitted, an error will panic up the stack until it finds such a function that will recover.
-
-This is the simplest form of `err3.Handle*`.
-
-```go
-func do() error {
-	defer err3.Handlef(&err, "do")
-	...
-}
-```
-
-There is also
-* `Handlew`: wrap the error with %w instead of %v
-* `Handle`: call a function with the error
-
-There are also helpers that are useful for catching errors and panics mostly in top-level functions: `Catch`, `CatchAll`, `CatchTrace`. Generally a program can use `CatchAll` at the top-level.
-
-
 ## Error checks
 
-The `try` package provides convenient helpers to check the errors. Since the Go
-1.18 we have been using generics to have fast and convenient error checking.
-
+The functions `CheckX` and `TryX` are used for checking and handling errors.
 For example, instead of
 
 ```go
@@ -70,17 +47,33 @@ if err != nil {
 we can call
 
 ```go
-b := try.Try1(ioutil.ReadAll(r))
+b := try.Check1(ioutil.ReadAll(r))
 ...
 ```
 
-but not without an error handler (`Return`, `Annotate`, `Handle`) or it just
-panics your app if you don't have a `recovery` call in the current call stack.
-However, you can put your error handlers where ever you want in your call stack.
-That can be handy in the internal packages and certain types of algorithms.
+But they do require a deferred error handler at the top of the function.
 
-We think that panicking for the errors at the start of the development is far
-better than not checking errors at all.
+
+## Error handling
+
+Every function which uses err3 for error-checking should have at least one
+`err3.Handle*` function declared with `defer`. These functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
+
+This is the simplest form of `err3.Handle*`.
+
+```go
+func do() error {
+	defer err3.Handlef(&err, "do")
+	...
+}
+```
+
+There is also
+* `Handlew`: wrap the error with %w instead of %v
+* `Handle`: call a function with the error
+* `HandleCleanup`: call a cleanup function
+
+There are also helpers `CatchError`, `CatchAll`, and `ErrorFromRecovery` that are useful for catching errors and panics in functions that do not return errors. These are generally callbacks, goroutines, and main.
 
 
 ## Background
@@ -109,12 +102,14 @@ x, err := f()
 err3.Check(Err)
 ```
 
-This form introduces minimal overhead (technically 6x slower, but just 1.7 nanoseconds slower):
+This form introduces minimal overhead.
+On My Mac M1 it shows as taking an additional 1.7 nanoseconds, which is 6x slower than the original.
 
 ``` go
-_ = err3.Try1(f())
+_ = err3.Check1(f())
 ```
 
 #### Automatic And Optimized Stack Tracing
 
-TODO
+By default, TryX and CheckX will wrap the error so that it has a stack trace
+This can be disabled by setting the `AddStackTrace = false`

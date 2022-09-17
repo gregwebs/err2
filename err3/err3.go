@@ -94,7 +94,7 @@ func CatchError(handlerFn func(error)) {
 	})
 }
 
-// ExtracErrorFromRecovery returns a non-runtime error from the recovery object
+// ErrorFromRecovery returns a non-runtime error from the recovery object
 func ErrorFromRecovery(r any) error {
 	switch r.(type) {
 	case runtime.Error:
