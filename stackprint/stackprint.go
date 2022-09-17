@@ -58,8 +58,8 @@ var (
 	// includes function calls in our package and its sub packages. The
 	// following lines help you figure out what kind of lines we are talking
 	// about:
-	//   github.com/lainio/err2/try.To1[...](...)
-	//   github.com/lainio/err2/assert.Asserter.True(...)
+	//   github.com/lainio/err3/try.To1[...](...)
+	//   github.com/lainio/err3/assert.Asserter.True(...)
 	PackageRegexp = regexp.MustCompile(`(lainio|gregwebsd)/err(2|3)[a-zA-Z0-9_/.\[\]]*\(`)
 )
 

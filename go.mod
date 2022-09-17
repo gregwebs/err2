@@ -1,8 +1,5 @@
-module github.com/gregwebs/err2
+module github.com/gregwebs/err3
 
-replace (
-	github.com/gregwebs/err3 => ./err3
-	github.com/gregwebs/try => ./try
-)
+replace github.com/gregwebs/err3 => ./err3
 
 go 1.18

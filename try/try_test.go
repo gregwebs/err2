@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/gregwebs/err2/err3"
-	"github.com/gregwebs/err2/try"
+	"github.com/gregwebs/err3/err3"
+	"github.com/gregwebs/err3/try"
 )
 
 var (

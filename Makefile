@@ -1,9 +1,9 @@
 # Original from github.com/pkg/errors
 
-PKG1 := github.com/gregwebs/err2/err3
-PKG2 := github.com/gregwebs/err2/assert
-PKG3 := github.com/gregwebs/err2/try
-PKG4 := github.com/gregwebs/err2/stackprint
+PKG1 := github.com/gregwebs/err3/err3
+PKG2 := github.com/gregwebs/err3/assert
+PKG3 := github.com/gregwebs/err3/try
+PKG4 := github.com/gregwebs/err3/stackprint
 PKGS := $(PKG1) $(PKG2) $(PKG3) $(PKG4)
 
 SRCDIRS := $(shell go list -f '{{.Dir}}' $(PKGS))

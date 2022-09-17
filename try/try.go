@@ -8,19 +8,19 @@ If the error is not nil it is automatically thrown via panic.
 It is then caught by 'Handle'
 
 	  import (
-		"github.com/gregwebs/err2"
+		"github.com/gregwebs/err3"
 		_ "github.com/gregwebs/try"
 	  )
 
 	  func do() (err error) {
-	    defer err2.Handlew(&err, "do")
+	    defer err3.Handlew(&err, "do")
 
 	    x := Try1(f())(Formatw("called f"))
 	  }
 
 Package try is a package for try.TryX functions that implement the error
 checking. try.TryX functions check 'if err != nil' and if it throws the err to the
-error handlers, which are implemented by the err2 package.
+error handlers, which are implemented by the err3 package.
 
 All of the try package functions should be as fast as the simple 'if err != nil {'
 statement, thanks to the compiler inlining and optimization.
@@ -67,7 +67,7 @@ func Cleanup(handler func()) func(error) error {
 // Try is a helper function to immediately return error values without adding an if statement with a return.
 // If the error value is non-nil, the handler function will be applied to it first.
 // Then the non-nil error will be given to panic.
-// You must use err2.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
+// You must use err3.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
 func Try[E error](errE E) func(func(E) error, ...func(error) error) {
 	return func(handler func(E) error, handlers ...func(error) error) {
 		if error(errE) != nil {
@@ -130,7 +130,7 @@ func Try3[T, U, V any, E error](v1 T, v2 U, v3 V, err E) func(func(E) error, ...
 
 // Check is a helper function to immediately return error values without adding an if statement with a return.
 // If an error occurs, it panics the error.
-// You must use err2.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
+// You must use err3.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
 // the Try... functions an be used instead of Check... to add an error handler
 func Check(err error) {
 	if err != nil {

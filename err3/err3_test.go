@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gregwebs/err2/err3"
-	"github.com/gregwebs/err2/try"
+	"github.com/gregwebs/err3/err3"
+	"github.com/gregwebs/err3/try"
 )
 
 func throw() (string, error) {
@@ -503,7 +503,7 @@ func Benchmark_NoErr_Check1(b *testing.B) {
 	}
 }
 
-func Benchmark_NoErr2_Check_NilErr(b *testing.B) {
+func Benchmark_Noerr3_Check_NilErr(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := noThrow()
 		try.Check(err)
