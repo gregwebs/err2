@@ -1,4 +1,4 @@
-package debug
+package stackprint
 
 import (
 	"bufio"
@@ -11,7 +11,41 @@ import (
 	"strings"
 )
 
-type StackInfo struct {
+// Print out an error with a stack trace
+func PrintError(w io.Writer, err error) {
+	si := stackPrologueError
+	printStack(w, si, err)
+}
+
+// Print out a panic with a stack trace
+func PrintPanic(w io.Writer, r any) {
+	printStack(w, stackProloguePanic, r)
+}
+
+func printStack(w io.Writer, si stackInfo, msg any) {
+	fmt.Fprintf(w, "---\n%v\n---\n", msg)
+	FprintStack(w, si)
+}
+
+var (
+	stackPrologueError = newErrSI()
+	stackProloguePanic = newSI("", "panic(", 1)
+)
+
+func newErrSI() stackInfo {
+	return stackInfo{Regexp: PackageRegexp, Level: 1}
+}
+
+func newSI(pn, fn string, lvl int) stackInfo {
+	return stackInfo{
+		PackageName: pn,
+		FuncName:    fn,
+		Level:       lvl,
+		Regexp:      PackageRegexp,
+	}
+}
+
+type stackInfo struct {
 	PackageName string
 	FuncName    string
 	Level       int
@@ -29,7 +63,7 @@ var (
 	PackageRegexp = regexp.MustCompile(`lainio/err2[a-zA-Z0-9_/.\[\]]*\(`)
 )
 
-func (si StackInfo) fullName() string {
+func (si stackInfo) fullName() string {
 	dot := ""
 	if si.PackageName != "" && si.FuncName != "" {
 		dot = "."
@@ -37,7 +71,7 @@ func (si StackInfo) fullName() string {
 	return fmt.Sprintf("%s%s%s", si.PackageName, dot, si.FuncName)
 }
 
-func (si StackInfo) isAnchor(s string) bool {
+func (si stackInfo) isAnchor(s string) bool {
 	// Regexp matching is high priority. That's why it's the first one.
 	if si.Regexp != nil {
 		return si.Regexp.MatchString(s)
@@ -45,7 +79,7 @@ func (si StackInfo) isAnchor(s string) bool {
 	return si.isFuncAnchor(s)
 }
 
-func (si StackInfo) isFuncAnchor(s string) bool {
+func (si stackInfo) isFuncAnchor(s string) bool {
 	if si.PackageName == "" && si.FuncName == "" {
 		return true // cannot calculate anchor, calling algorithm set it zero
 	}
@@ -55,19 +89,19 @@ func (si StackInfo) isFuncAnchor(s string) bool {
 // PrintStack prints to standard error the stack trace returned by runtime.Stack
 // by starting from stackLevel.
 func PrintStack(stackLevel int) {
-	FprintStack(os.Stderr, StackInfo{Level: stackLevel})
+	FprintStack(os.Stderr, stackInfo{Level: stackLevel})
 }
 
 // FprintStack prints the stack trace returned by runtime.Stack to the writer.
-// The StackInfo tells what it prints from the stack.
-func FprintStack(w io.Writer, si StackInfo) {
+// The stackInfo tells what it prints from the stack.
+func FprintStack(w io.Writer, si stackInfo) {
 	stackBuf := bytes.NewBuffer(debug.Stack())
 	stackPrint(stackBuf, w, si)
 }
 
 // stackPrint prints the stack trace read from reader and to the writer. The
-// StackInfo tells what it prints from the stack.
-func stackPrint(r io.Reader, w io.Writer, si StackInfo) {
+// stackInfo tells what it prints from the stack.
+func stackPrint(r io.Reader, w io.Writer, si stackInfo) {
 	var buf bytes.Buffer
 	r = io.TeeReader(r, &buf)
 	anchorLine := calcAnchor(r, si)
@@ -94,7 +128,7 @@ func stackPrint(r io.Reader, w io.Writer, si StackInfo) {
 
 // calcAnchor calculates the optimal anchor line. Optimal is the shortest but
 // including all the needed information.
-func calcAnchor(r io.Reader, si StackInfo) int {
+func calcAnchor(r io.Reader, si stackInfo) int {
 	var buf bytes.Buffer
 	r = io.TeeReader(r, &buf)
 
@@ -118,7 +152,7 @@ func calcAnchor(r io.Reader, si StackInfo) int {
 }
 
 // calc calculates anchor line it takes criteria function as an argument.
-func calc(r io.Reader, si StackInfo, anchor func(s string) bool) int {
+func calc(r io.Reader, si stackInfo, anchor func(s string) bool) int {
 	scanner := bufio.NewScanner(r)
 
 	// there is a caption line first, that's why we start from -1
@@ -128,7 +162,7 @@ func calc(r io.Reader, si StackInfo, anchor func(s string) bool) int {
 		line := scanner.Text()
 
 		// anchorLine can set when it's not the caption line AND it matches to
-		// StackInfo criteria
+		// stackInfo criteria
 		canSetAnchorLine := i > -1 && anchor(line)
 		if canSetAnchorLine {
 			anchorLine = i

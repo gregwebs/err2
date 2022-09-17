@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/lainio/err2/internal/debug"
+	"github.com/lainio/err2/stackprint"
 )
 
 // Asserter is type for asserter object guided by its flags.
@@ -67,7 +67,7 @@ func (asserter Asserter) Truef(term bool, format string, a ...any) {
 			tester().Helper()
 		}
 		if asserter.hasStackTrace() {
-			debug.PrintStack(1)
+			stackprint.PrintStack(1)
 		}
 		asserter.reportPanic(fmt.Sprintf(format, a...))
 	}
@@ -159,7 +159,7 @@ func (asserter Asserter) reportAssertionFault(defaultMsg string, a ...any) {
 		tester().Helper()
 	}
 	if asserter.hasStackTrace() {
-		debug.PrintStack(2)
+		stackprint.PrintStack(2)
 	}
 	if asserter.hasCallerInfo() {
 		defaultMsg = asserter.callerInfo(defaultMsg)

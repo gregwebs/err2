@@ -3,7 +3,7 @@
 PKG1 := github.com/lainio/err2
 PKG2 := github.com/lainio/err2/assert
 PKG3 := github.com/lainio/err2/try
-PKG4 := github.com/lainio/err2/internal/debug
+PKG4 := github.com/lainio/err2/stackprint
 PKGS := $(PKG1) $(PKG2) $(PKG3) $(PKG4)
 
 SRCDIRS := $(shell go list -f '{{.Dir}}' $(PKGS))

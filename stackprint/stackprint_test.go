@@ -1,4 +1,4 @@
-package debug
+package stackprint
 
 import (
 	"bytes"
@@ -25,17 +25,17 @@ func requiref(tb testing.TB, condition bool, format string, v ...interface{}) {
 
 func TestFullName(t *testing.T) {
 	type args struct {
-		StackInfo
+		stackInfo
 	}
 	tests := []struct {
 		name string
 		args
 		retval string
 	}{
-		{"all empty", args{StackInfo{"", "", 0, nil}}, ""},
-		{"namespaces", args{StackInfo{"lainio/err2", "", 0, nil}}, "lainio/err2"},
-		{"both", args{StackInfo{"lainio/err2", "try", 0, nil}}, "lainio/err2.try"},
-		{"func", args{StackInfo{"", "try", 0, nil}}, "try"},
+		{"all empty", args{stackInfo{"", "", 0, nil}}, ""},
+		{"namespaces", args{stackInfo{"lainio/err2", "", 0, nil}}, "lainio/err2"},
+		{"both", args{stackInfo{"lainio/err2", "try", 0, nil}}, "lainio/err2.try"},
+		{"func", args{stackInfo{"", "try", 0, nil}}, "try"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestFullName(t *testing.T) {
 func TestIsAnchor(t *testing.T) {
 	type args struct {
 		input string
-		StackInfo
+		stackInfo
 	}
 	tests := []struct {
 		name string
@@ -58,34 +58,34 @@ func TestIsAnchor(t *testing.T) {
 	}{
 		{"panic func and short regexp", args{
 			"github.com/lainio/err2.Return(0x14001c1ee20)",
-			StackInfo{"", "panic(", 0, PackageRegexp}}, true},
+			stackInfo{"", "panic(", 0, PackageRegexp}}, true},
 		{"func hit and regexp on", args{
 			"github.com/lainioxx/err2_printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "printStackIf(", 0, noHitRegexp}}, false},
+			stackInfo{"", "printStackIf(", 0, noHitRegexp}}, false},
 		{"short regexp no match", args{
 			"github.com/lainioxx/err2_printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "", 0, noHitRegexp}}, false},
+			stackInfo{"", "", 0, noHitRegexp}}, false},
 		{"short regexp", args{
 			"github.com/lainio/err2/assert.That({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "", 0, PackageRegexp}}, true},
+			stackInfo{"", "", 0, PackageRegexp}}, true},
 		{"short", args{
 			"github.com/lainio/err2.printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "", 0, nil}}, true},
+			stackInfo{"", "", 0, nil}}, true},
 		{"short-but-false", args{
 			"github.com/lainio/err2.printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"err2", "Handle", 0, nil}}, false},
+			stackInfo{"err2", "Handle", 0, nil}}, false},
 		{"medium", args{
 			"github.com/lainio/err2.Returnw(0x40000b3e60, {0x0, 0x0}, {0x0, 0x0, 0x0})",
-			StackInfo{"err2", "Returnw", 0, nil}}, true},
+			stackInfo{"err2", "Returnw", 0, nil}}, true},
 		{"medium-but-false", args{
 			"github.com/lainio/err2.Returnw(0x40000b3e60, {0x0, 0x0}, {0x0, 0x0, 0x0})",
-			StackInfo{"err2", "Return(", 0, nil}}, false},
+			stackInfo{"err2", "Return(", 0, nil}}, false},
 		{"long", args{
 			"github.com/lainio/err2.Handle(0x40000b3ed8, 0x40000b3ef8)",
-			StackInfo{"err2", "Handle", 0, nil}}, true},
+			stackInfo{"err2", "Handle", 0, nil}}, true},
 		{"package name only", args{
 			"github.com/lainio/err2/try.To1[...](...)",
-			StackInfo{"lainio/err2", "", 0, nil}}, true},
+			stackInfo{"lainio/err2", "", 0, nil}}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,7 +97,7 @@ func TestIsAnchor(t *testing.T) {
 func TestIsFuncAnchor(t *testing.T) {
 	type args struct {
 		input string
-		StackInfo
+		stackInfo
 	}
 	tests := []struct {
 		name string
@@ -106,28 +106,28 @@ func TestIsFuncAnchor(t *testing.T) {
 	}{
 		{"func hit and regexp on", args{
 			"github.com/lainioxx/err2_printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "printStackIf(", 0, noHitRegexp}}, true},
+			stackInfo{"", "printStackIf(", 0, noHitRegexp}}, true},
 		{"short regexp", args{
 			"github.com/lainio/err2/assert.That({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "", 0, PackageRegexp}}, true},
+			stackInfo{"", "", 0, PackageRegexp}}, true},
 		{"short", args{
 			"github.com/lainio/err2.printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"", "", 0, nil}}, true},
+			stackInfo{"", "", 0, nil}}, true},
 		{"short-but-false", args{
 			"github.com/lainio/err2.printStackIf({0x1545d2, 0x6}, 0x0, {0x12e3e0?, 0x188f50?})",
-			StackInfo{"err2", "Handle", 0, nil}}, false},
+			stackInfo{"err2", "Handle", 0, nil}}, false},
 		{"medium", args{
 			"github.com/lainio/err2.Returnw(0x40000b3e60, {0x0, 0x0}, {0x0, 0x0, 0x0})",
-			StackInfo{"err2", "Returnw", 0, nil}}, true},
+			stackInfo{"err2", "Returnw", 0, nil}}, true},
 		{"medium-but-false", args{
 			"github.com/lainio/err2.Returnw(0x40000b3e60, {0x0, 0x0}, {0x0, 0x0, 0x0})",
-			StackInfo{"err2", "Return(", 0, nil}}, false},
+			stackInfo{"err2", "Return(", 0, nil}}, false},
 		{"long", args{
 			"github.com/lainio/err2.Handle(0x40000b3ed8, 0x40000b3ef8)",
-			StackInfo{"err2", "Handle", 0, nil}}, true},
+			stackInfo{"err2", "Handle", 0, nil}}, true},
 		{"package name only", args{
 			"github.com/lainio/err2/try.To1[...](...)",
-			StackInfo{"lainio/err2", "", 0, nil}}, true},
+			stackInfo{"lainio/err2", "", 0, nil}}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -149,7 +149,7 @@ func TestStackPrint_noLimits(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := strings.NewReader(tt.input)
 			w := new(bytes.Buffer)
-			stackPrint(r, w, StackInfo{
+			stackPrint(r, w, stackInfo{
 				PackageName: "",
 				FuncName:    "",
 				Level:       0,
@@ -162,26 +162,26 @@ func TestStackPrint_noLimits(t *testing.T) {
 func TestCalcAnchor(t *testing.T) {
 	type args struct {
 		input string
-		StackInfo
+		stackInfo
 	}
 	tests := []struct {
 		name string
 		args
 		anchor int
 	}{
-		{"macOS from test using regexp", args{inputFromMac, StackInfo{"", "panic(", 1, PackageRegexp}}, 12},
-		{"short", args{input, StackInfo{"", "panic(", 0, nil}}, 6},
-		{"short error stack", args{inputByError, StackInfo{"", "panic(", 0, PackageRegexp}}, 4},
-		{"short and nolimit", args{input, StackInfo{"", "", 0, nil}}, nilAnchor},
-		{"medium", args{input1, StackInfo{"", "panic(", 0, nil}}, 10},
-		{"from test using panic", args{inputFromTest, StackInfo{"", "panic(", 0, nil}}, 8},
-		{"from test", args{inputFromTest, StackInfo{"", "panic(", 0, PackageRegexp}}, 14},
-		{"macOS from test using panic", args{inputFromMac, StackInfo{"", "panic(", 0, nil}}, 12},
+		{"macOS from test using regexp", args{inputFromMac, stackInfo{"", "panic(", 1, PackageRegexp}}, 12},
+		{"short", args{input, stackInfo{"", "panic(", 0, nil}}, 6},
+		{"short error stack", args{inputByError, stackInfo{"", "panic(", 0, PackageRegexp}}, 4},
+		{"short and nolimit", args{input, stackInfo{"", "", 0, nil}}, nilAnchor},
+		{"medium", args{input1, stackInfo{"", "panic(", 0, nil}}, 10},
+		{"from test using panic", args{inputFromTest, stackInfo{"", "panic(", 0, nil}}, 8},
+		{"from test", args{inputFromTest, stackInfo{"", "panic(", 0, PackageRegexp}}, 14},
+		{"macOS from test using panic", args{inputFromMac, stackInfo{"", "panic(", 0, nil}}, 12},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := strings.NewReader(tt.input)
-			anchor := calcAnchor(r, tt.StackInfo)
+			anchor := calcAnchor(r, tt.stackInfo)
 			require(t, tt.anchor == anchor, "equal")
 		})
 	}
@@ -190,25 +190,25 @@ func TestCalcAnchor(t *testing.T) {
 func TestStackPrint_limit(t *testing.T) {
 	type args struct {
 		input string
-		StackInfo
+		stackInfo
 	}
 	tests := []struct {
 		name string
 		args
 		output string
 	}{
-		{"short", args{input, StackInfo{"err2", "Returnw(", 0, nil}}, output},
-		{"medium", args{input1, StackInfo{"err2", "Returnw(", 0, nil}}, output1},
-		{"medium level 2", args{input1, StackInfo{"err2", "Returnw(", 2, nil}}, output12},
-		{"medium panic", args{input1, StackInfo{"", "panic(", 0, nil}}, output1panic},
-		{"long", args{input2, StackInfo{"err2", "Handle(", 0, nil}}, output2},
-		{"long lvl 2", args{input2, StackInfo{"err2", "Handle(", 3, nil}}, output23},
+		{"short", args{input, stackInfo{"err2", "Returnw(", 0, nil}}, output},
+		{"medium", args{input1, stackInfo{"err2", "Returnw(", 0, nil}}, output1},
+		{"medium level 2", args{input1, stackInfo{"err2", "Returnw(", 2, nil}}, output12},
+		{"medium panic", args{input1, stackInfo{"", "panic(", 0, nil}}, output1panic},
+		{"long", args{input2, stackInfo{"err2", "Handle(", 0, nil}}, output2},
+		{"long lvl 2", args{input2, stackInfo{"err2", "Handle(", 3, nil}}, output23},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := strings.NewReader(tt.input)
 			w := new(bytes.Buffer)
-			stackPrint(r, w, StackInfo{
+			stackPrint(r, w, stackInfo{
 				PackageName: tt.PackageName,
 				FuncName:    tt.FuncName,
 				Level:       tt.Level,
