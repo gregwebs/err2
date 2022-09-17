@@ -499,14 +499,14 @@ func Benchmark_Err_Try1_Fmt(b *testing.B) {
 
 func Benchmark_NoErr_Check1(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_ = try.Check1(noThrow()) // we show here what can take time
+		_ = try.Check1(noThrow()) // a slight slow-down
 	}
 }
 
 func Benchmark_Noerr3_Check_NilErr(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := noThrow()
-		try.Check(err)
+		try.Check(err) // no slow-down
 	}
 }
 

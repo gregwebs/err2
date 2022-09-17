@@ -41,7 +41,10 @@ package err3
 
 import (
 	"fmt"
+	"github.com/pingcap/errors"
 )
+
+var AddStackTrace bool = true
 
 func Fmtw(format string, args ...any) func(error) error {
 	return func(err error) error {
@@ -64,65 +67,91 @@ func Cleanup(handler func()) func(error) error {
 	}
 }
 
-// Try is a helper function to immediately return error values without adding an if statement with a return.
-// If the error value is non-nil, the handler function will be applied to it first.
+// Try is a helper function to return error values without adding a large if statement.
+// It replaces the following code:
+//
+//	err := f()
+// 	if err != nil {
+//		return handler(err)
+//	}
+//
+// With this code:
+//
+// 	try.Try(f(), handler)
+//
+// If the error value nil, it is a noop
+// If the error value is non-nil, the handler functions will be applied to the error
 // Then the non-nil error will be given to panic.
-// You must use err3.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
-func Try[E error](errE E) func(func(E) error, ...func(error) error) {
-	return func(handler func(E) error, handlers ...func(error) error) {
-		if error(errE) != nil {
-			if handler == nil {
-				panic(errE)
-			}
-			errHandled := handler(errE)
-			var err error
-			// This both handles the fact that we allow cleanup functions
-			// that intentionally return nil,
-			// and doesn't allow a handler to accidentally eliminate the error by returning nil
-			if error(errHandled) != nil {
-				err = errHandled
-			}
-
-			for _, handler := range handlers {
-				if handler == nil {
-					continue
-				}
-				errHandled := handler(err)
-				// This both handles the fact that we allow cleanup functions
-				// that intentionally return nil,
-				// and doesn't allow a handler to accidentally eliminate the error by returning nil
-				if error(errHandled) != nil {
-					err = errHandled
-				}
-			}
-			panic(err)
+// You must use err3.Handle... at the top of your function to recover the error and return it instead of letting the panic continue to unwind
+//
+// By default, Try will wrap the error so that it has a stack trace
+// This can be disabled by setting the var AddStackTrace = false
+func Try[E error](errE E, handler func(E) error, handlers ...func(error) error) {
+	if error(errE) == nil {
+		return
+	}
+	err := error(errE)
+	handlers = append([](func(error) error){any(handler).(func(error) error)}, handlers...)
+	for _, handler := range handlers {
+		if handler == nil {
+			continue
+		}
+		errHandled := handler(err)
+		// This both handles the fact that we allow cleanup functions
+		// that intentionally return nil,
+		// and doesn't allow a handler to accidentally eliminate the error by returning nil
+		if error(errHandled) != nil {
+			err = errHandled
 		}
 	}
+
+	if AddStackTrace {
+		err = errors.AddStack(err)
+	}
+
+	panic(err)
 }
 
+// Try1 operates similar to 'Try'
+// The 1 indicates that one non-error value will be passed through.
+// Try takes handler functions directly as arguments
+// Due to limitations of the Go language, Try1 cannot.
+// Instead Try1 returns a function that handlers are applied to.
+// It replaces the following code:
+//
+//	x, err := f()
+// 	if err != nil {
+//		return handler(err)
+//	}
+//
+// With this code:
+//
+// 	x := try.Try1(f())(handler)
 func Try1[T any, E error](v T, err E) func(func(E) error, ...func(error) error) T {
 	return func(handler func(E) error, handlers ...func(error) error) T {
 		if error(err) != nil {
-			Try[E](err)(handler, handlers...)
+			Try[E](err, handler, handlers...)
 		}
 
 		return v
 	}
 }
 
+// Try2 is the same as Try1 but passes through 2 values
 func Try2[T, U any, E error](v1 T, v2 U, err E) func(func(E) error, ...func(error) error) (T, U) {
 	return func(handler func(E) error, handlers ...func(error) error) (T, U) {
 		if error(err) != nil {
-			Try[E](err)(handler, handlers...)
+			Try[E](err, handler, handlers...)
 		}
 		return v1, v2
 	}
 }
 
+// Try2 is the same as Try1 but passes through 3 values
 func Try3[T, U, V any, E error](v1 T, v2 U, v3 V, err E) func(func(E) error, ...func(error) error) (T, U, V) {
 	return func(handler func(E) error, handlers ...func(error) error) (T, U, V) {
 		if error(err) != nil {
-			Try[E](err)(handler, handlers...)
+			Try[E](err, handler, handlers...)
 		}
 		return v1, v2, v3
 	}
@@ -132,8 +161,14 @@ func Try3[T, U, V any, E error](v1 T, v2 U, v3 V, err E) func(func(E) error, ...
 // If an error occurs, it panics the error.
 // You must use err3.Handle... at the top of your function to catch the error and return it instead of continuing the panic.
 // the Try... functions an be used instead of Check... to add an error handler
+//
+// By default, Check will wrap the error so that it has a stack trace
+// This can be disabled by setting the var AddStackTrace = false
 func Check(err error) {
 	if err != nil {
+		if AddStackTrace {
+			err = errors.AddStack(err)
+		}
 		panic(err)
 	}
 }
