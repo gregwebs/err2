@@ -1,4 +1,4 @@
-package err2_test
+package err3_test
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
+	"github.com/gregwebs/err2/err3"
+	"github.com/gregwebs/err2/try"
 )
 
 func throw() (string, error) {
@@ -20,7 +20,7 @@ func boolIntStrNoThrow() (bool, int, string, error) { return true, 1, "test", ni
 func noThrow() (string, error)                      { return "test", nil }
 
 func recursion(a int) (r int, err error) {
-	defer err2.Handle(&err, nil)
+	defer err3.Handle(&err, nil)
 
 	if a == 0 {
 		return 0, nil
@@ -59,18 +59,18 @@ func recursionWithErrorCheck(a int) (int, error) {
 }
 
 func errHandlefOnly() (err error) {
-	defer err2.Handlef(&err, "handle top")
-	defer err2.Handlef(&err, "handle error")
+	defer err3.Handlef(&err, "handle top")
+	defer err3.Handlef(&err, "handle error")
 	_ = try.Check1(throw())
-	defer err2.Handlef(&err, "handle error")
+	defer err3.Handlef(&err, "handle error")
 	_ = try.Check1(throw())
-	defer err2.Handlef(&err, "handle error")
+	defer err3.Handlef(&err, "handle error")
 	_ = try.Check1(throw())
 	return err
 }
 
 func errTry1_Fmt() (err error) {
-	defer err2.Handlef(&err, "handle top")
+	defer err3.Handlef(&err, "handle top")
 	// _ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_ = try.Try1(throw())(try.Fmt("handle error"))
 	_ = try.Try1(throw())(try.Fmt("handle error"))
@@ -82,7 +82,7 @@ func errId(err error) error { return err }
 func empty() error          { return nil }
 
 func errTry1_id() (err error) {
-	defer err2.Handlef(&err, "handle top")
+	defer err3.Handlef(&err, "handle top")
 	_ = try.Try1(throw())(errId)
 	_ = try.Try1(throw())(errId)
 	_ = try.Try1(throw())(errId)
@@ -90,18 +90,18 @@ func errTry1_id() (err error) {
 }
 
 func errHandle_Only() (err error) {
-	defer err2.Handlef(&err, "handle top")
-	defer err2.Handle(&err, empty)
+	defer err3.Handlef(&err, "handle top")
+	defer err3.Handle(&err, empty)
 	_ = try.Check1(throw())
-	defer err2.Handle(&err, empty)
+	defer err3.Handle(&err, empty)
 	_ = try.Check1(throw())
-	defer err2.Handle(&err, empty)
+	defer err3.Handle(&err, empty)
 	_ = try.Check1(throw())
 	return err
 }
 
 func errTry1_inlineHandler() (err error) {
-	defer err2.Handlef(&err, "handle top")
+	defer err3.Handlef(&err, "handle top")
 	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
@@ -121,7 +121,7 @@ func TestTry_noError(t *testing.T) {
 
 func TestDefault_Error(t *testing.T) {
 	var err error
-	defer err2.Handle(&err, nil)
+	defer err3.Handle(&err, nil)
 
 	try.Check1(throw())
 
@@ -130,7 +130,7 @@ func TestDefault_Error(t *testing.T) {
 
 func TestTry_Error(t *testing.T) {
 	var err error
-	defer err2.Handle(&err, nil)
+	defer err3.Handle(&err, nil)
 
 	try.Check1(throw())
 
@@ -149,7 +149,7 @@ func TestPanickingCatchAll(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err2.CatchAll(func(err error) {}, func(v any) {})
+					defer err3.CatchAll(func(err error) {}, func(v any) {})
 					panic("panic")
 				},
 			},
@@ -158,7 +158,7 @@ func TestPanickingCatchAll(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err2.CatchAll(func(err error) {}, func(v any) {})
+					defer err3.CatchAll(func(err error) {}, func(v any) {})
 					var b []byte
 					b[0] = 0
 				},
@@ -193,7 +193,7 @@ func TestPanickingCatchTrace(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err2.CatchAll(noError, noPanic)
+					defer err3.CatchAll(noError, noPanic)
 					panic("panic")
 				},
 			},
@@ -202,7 +202,7 @@ func TestPanickingCatchTrace(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err2.CatchAll(noError, noPanic)
+					defer err3.CatchAll(noError, noPanic)
 					var b []byte
 					b[0] = 0
 				},
@@ -235,7 +235,7 @@ func TestPanickingCarryOn_Handle(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Handle(&err, nil)
+					defer err3.Handle(&err, nil)
 					panic("panic")
 				},
 			},
@@ -245,7 +245,7 @@ func TestPanickingCarryOn_Handle(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Handle(&err, nil)
+					defer err3.Handle(&err, nil)
 					var b []byte
 					b[0] = 0
 				},
@@ -278,7 +278,7 @@ func TestPanicking_Return(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Handle(&err, nil)
+					defer err3.Handle(&err, nil)
 					panic("panic")
 				},
 			},
@@ -288,7 +288,7 @@ func TestPanicking_Return(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Handle(&err, nil)
+					defer err3.Handle(&err, nil)
 					var b []byte
 					b[0] = 0
 				},
@@ -320,7 +320,7 @@ func TestPanicking_Catch(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err2.CatchError(func(err error) {})
+					defer err3.CatchError(func(err error) {})
 					panic("panic")
 				},
 			},
@@ -329,7 +329,7 @@ func TestPanicking_Catch(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err2.CatchError(func(err error) {})
+					defer err3.CatchError(func(err error) {})
 					var b []byte
 					b[0] = 0
 				},
@@ -350,7 +350,7 @@ func TestPanicking_Catch(t *testing.T) {
 }
 
 func TestCatch_Error(t *testing.T) {
-	defer err2.CatchError(func(err error) {
+	defer err3.CatchError(func(err error) {
 		//fmt.Printf("error and defer handling:%s\n", err)
 	})
 
@@ -361,7 +361,7 @@ func TestCatch_Error(t *testing.T) {
 
 func Example_copyFile() {
 	copyFile := func(src, dst string) (err error) {
-		defer err2.Handlef(&err, "copy %s %s", src, dst)
+		defer err3.Handlef(&err, "copy %s %s", src, dst)
 
 		// These try.To() checkers are as fast as `if err != nil {}`
 
@@ -386,14 +386,14 @@ func Example_copyFile() {
 
 func ExampleHandle() {
 	var err error
-	defer err2.Handle(&err, nil)
+	defer err3.Handle(&err, nil)
 	try.Check1(noThrow())
 	// Output:
 }
 
 func ExampleHandlef() {
 	annotated := func() (err error) {
-		defer err2.Handlef(&err, "annotated")
+		defer err3.Handlef(&err, "annotated")
 		try.Check1(throw())
 		return err
 	}
@@ -404,13 +404,13 @@ func ExampleHandlef() {
 
 func ExampleHandlef_format_args() {
 	annotated := func() (err error) {
-		defer err2.Handlef(&err, "annotated: %s", "err2")
+		defer err3.Handlef(&err, "annotated: %s", "err3")
 		try.Check1(throw())
 		return err
 	}
 	err := annotated()
 	fmt.Printf("%v", err)
-	// Output: annotated: err2: this is an ERROR
+	// Output: annotated: err3: this is an ERROR
 }
 
 func ExampleHandlef_panic() {
@@ -428,7 +428,7 @@ func ExampleHandlef_panic() {
 	}
 
 	annotated := func() (err error) {
-		defer err2.Handlef(&err, "annotated: %s", "err2")
+		defer err3.Handlef(&err, "annotated: %s", "err3")
 
 		r := recursion(12) // call recursive algorithm successfully
 		recursion(r)       // call recursive algorithm unsuccessfully
@@ -436,13 +436,13 @@ func ExampleHandlef_panic() {
 	}
 	err := annotated()
 	fmt.Printf("%v", err)
-	// Output: annotated: err2: helper failed at: 78
+	// Output: annotated: err3: helper failed at: 78
 }
 
 func ExampleHandlef_deferStack() {
 	annotated := func() (err error) {
-		defer err2.Handlef(&err, "3rd")
-		defer err2.Handlef(&err, "2nd")
+		defer err3.Handlef(&err, "3rd")
+		defer err3.Handlef(&err, "2nd")
 		_ = try.Try1(throw())(try.Fmt("1st"))
 		return err
 	}
@@ -453,7 +453,7 @@ func ExampleHandlef_deferStack() {
 
 func ExampleHandle_with_handler() {
 	doSomething := func(a, b int) (err error) {
-		defer err2.Handle(&err, func() error {
+		defer err3.Handle(&err, func() error {
 			return fmt.Errorf("error with (%d, %d): %v", a, b, err)
 		})
 		try.Check1(throw())

@@ -1,13 +1,13 @@
 /*
-Package err2 provides three main functionality:
- 1. err2 package includes helper functions for error recovery and handling
+Package err3 provides three main functionality:
+ 1. err3 package includes helper functions for error recovery and handling
  2. try package is for error checking and handling
 
 The traditional error handling idiom in Go is roughly akin to
 
 	if err != nil { return err }
 
-The err2 package drives programmers to focus more on error handling rather than
+The err3 package drives programmers to focus more on error handling rather than
 checking errors. We think that checks should be so easy that we never forget
 them. The CopyFile example shows how it works:
 
@@ -15,10 +15,10 @@ them. The CopyFile example shows how it works:
 	// returns error value describing the reason.
 	func CopyFile(src, dst string) (err error) {
 	     // Add first error handler just to annotate the error properly.
-	     defer err2.Handlef(&err, "copy %s %s", src, dst)
+	     defer err3.Handlef(&err, "copy %s %s", src, dst)
 
 	     // Try to open the file. If error occurs now, err will be annotated and
-	     // returned properly thanks to above err2.Returnf.
+	     // returned properly thanks to above err3.Returnf.
 	     r := try.Try1(os.Open(src))
 	     defer r.Close()
 
@@ -27,7 +27,7 @@ them. The CopyFile example shows how it works:
 	     w := try.Try1(os.Create(dst))
 	     // Add error handler to clean up the destination file. Place it here that
 	     // the next deferred close is called before our Remove call.
-	     defer err2.Cleanup(&err, func() {
+	     defer err3.Cleanup(&err, func() {
 	     	os.Remove(dst)
 	     })
 	     defer w.Close()
@@ -64,8 +64,8 @@ the try package documentation for more information about the error checks.
 
 # Error handling
 
-The beginning of every function should contain an `err2.Handle*` to ensure that
+The beginning of every function should contain an `err3.Handle*` to ensure that
 errors are caught. Otherwise errors will escape the function as a panic and you
 will be relying on calling functions to properly recover from panics.
 */
-package err2
+package err3

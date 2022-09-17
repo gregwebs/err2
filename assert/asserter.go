@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/lainio/err2/stackprint"
+	"github.com/gregwebs/err2/stackprint"
 )
 
 // Asserter is type for asserter object guided by its flags.

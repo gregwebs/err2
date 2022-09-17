@@ -1,4 +1,4 @@
-package err2
+package err3
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 )
 
 // A convenience function for usuing a function that
-// Every function using err2/try must defer a Handle* function.
+// Every function using err3/try must defer a Handle* function.
 // These must be used with `defer`
 //
 // If no additional error annotation is desired, 'nil' may be given as the handlerFn
@@ -21,7 +21,7 @@ func Handle(err *error, handlerFn func() error) {
 	handleRecover(r, err, handlerFn)
 }
 
-func Cleanup(err *error, handlerFn func()) {
+func HandleCleanup(err *error, handlerFn func()) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	handleRecover(r, err, func() error {

@@ -1,9 +1,9 @@
 # Original from github.com/pkg/errors
 
-PKG1 := github.com/lainio/err2
-PKG2 := github.com/lainio/err2/assert
-PKG3 := github.com/lainio/err2/try
-PKG4 := github.com/lainio/err2/stackprint
+PKG1 := github.com/gregwebs/err2/err3
+PKG2 := github.com/gregwebs/err2/assert
+PKG3 := github.com/gregwebs/err2/try
+PKG4 := github.com/gregwebs/err2/stackprint
 PKGS := $(PKG1) $(PKG2) $(PKG3) $(PKG4)
 
 SRCDIRS := $(shell go list -f '{{.Dir}}' $(PKGS))
@@ -47,3 +47,5 @@ gofmt:
 godoc:
 	@GO111MODULE=off godoc -http=0.0.0.0:6060
 
+build:
+	cat try/try.go | sed 's|package try|package err3|' > try.go

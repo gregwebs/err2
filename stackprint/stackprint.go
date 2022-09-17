@@ -60,7 +60,7 @@ var (
 	// about:
 	//   github.com/lainio/err2/try.To1[...](...)
 	//   github.com/lainio/err2/assert.Asserter.True(...)
-	PackageRegexp = regexp.MustCompile(`lainio/err2[a-zA-Z0-9_/.\[\]]*\(`)
+	PackageRegexp = regexp.MustCompile(`(lainio|gregwebsd)/err(2|3)[a-zA-Z0-9_/.\[\]]*\(`)
 )
 
 func (si stackInfo) fullName() string {

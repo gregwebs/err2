@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
+	"github.com/gregwebs/err2/err3"
+	"github.com/gregwebs/err2/try"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 
 func Example_copyFile() {
 	copyFile := func(src, dst string) (err error) {
-		defer err2.Handlef(&err, "copy %s %s", src, dst)
+		defer err3.Handlef(&err, "copy %s %s", src, dst)
 
 		// These try package helpers are as fast as Check() calls which is as
 		// fast as `if err != nil {}`
@@ -24,7 +24,7 @@ func Example_copyFile() {
 		defer r.Close()
 
 		w := try.Check1(os.Create(dst))
-		defer err2.Cleanup(&err, func() {
+		defer err3.HandleCleanup(&err, func() {
 			os.Remove(dst)
 		})
 		defer w.Close()
@@ -41,7 +41,7 @@ func Example_copyFile() {
 
 func Example_copyFile_try() {
 	copyFile := func(src, dst string) (err error) {
-		defer err2.Handlef(&err, "copy %s %s", src, dst)
+		defer err3.Handlef(&err, "copy %s %s", src, dst)
 
 		// These try package helpers are as fast as Check() calls which is as
 		// fast as `if err != nil {}`
