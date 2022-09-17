@@ -35,12 +35,7 @@ Note that try.ToX function names end to a number (x) because:
 The leading number at the end of the To2 tells that To2 takes two different
 non-error arguments, and the third one must be an error value.
 
-Looking at the FileCopy example again, you see that all the functions
-are directed to try.To1 are returning (type1, error) tuples. All of these
-tuples are the correct input to try.To1. However, if you have a function that
-returns (type1, type2, error), you must use try.To2 function to check the error.
-Currently the try.To3 takes (3 + 1) return values which is the greatest amount.
-If more is needed, let us know.
+Currently only To, To1, To2, and To3 are implemented, but more could be added.
 */
 package try
 
@@ -48,35 +43,25 @@ import (
 	"fmt"
 )
 
-type ErrorMap func(error) error
-
-func Fmtw(format string, args ...any) ErrorMap {
+func Fmtw(format string, args ...any) func(error) error {
 	return func(err error) error {
 		args = append(args, err)
 		return fmt.Errorf(format+": %w", args...)
 	}
 }
 
-func Fmt(format string, args ...any) ErrorMap {
+func Fmt(format string, args ...any) func(error) error {
 	return func(err error) error {
 		args = append(args, err)
 		return fmt.Errorf(format+": %v", args...)
 	}
 }
 
-func Cleanup(handler func()) ErrorMap {
+func Cleanup(handler func()) func(error) error {
 	return func(err error) error {
 		handler()
 		return err
 	}
-}
-
-func Then[E, F, G error](e1 func(E) F, e2 func(F) G) func(E) G {
-	return func(err E) G { return e2(e1(err)) }
-}
-
-func (e1 ErrorMap) Then(e2 func(error) error) ErrorMap {
-	return func(err error) error { return e2(e1(err)) }
 }
 
 // Try is a helper function to immediately return error values without adding an if statement with a return.

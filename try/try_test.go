@@ -24,7 +24,7 @@ func Example_copyFile() {
 		defer r.Close()
 
 		w := try.Check1(os.Create(dst))
-		defer err2.Handle(&err, func() {
+		defer err2.Cleanup(&err, func() {
 			os.Remove(dst)
 		})
 		defer w.Close()

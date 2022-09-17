@@ -1,14 +1,11 @@
 /*
 Package err2 provides three main functionality:
- 1. err2 package includes helper functions for error handling & stack tracing
- 2. try package is for error checking
- 3. assert package is for design-by-contract and preconditions
+ 1. err2 package includes helper functions for error recovery and handling
+ 2. try package is for error checking and handling
 
 The traditional error handling idiom in Go is roughly akin to
 
 	if err != nil { return err }
-
-which applied recursively.
 
 The err2 package drives programmers to focus more on error handling rather than
 checking errors. We think that checks should be so easy that we never forget
@@ -18,19 +15,19 @@ them. The CopyFile example shows how it works:
 	// returns error value describing the reason.
 	func CopyFile(src, dst string) (err error) {
 	     // Add first error handler just to annotate the error properly.
-	     defer err2.Returnf(&err, "copy %s %s", src, dst)
+	     defer err2.Handlef(&err, "copy %s %s", src, dst)
 
 	     // Try to open the file. If error occurs now, err will be annotated and
 	     // returned properly thanks to above err2.Returnf.
-	     r := try.To1(os.Open(src))
+	     r := try.Try1(os.Open(src))
 	     defer r.Close()
 
 	     // Try to create a file. If error occurs now, err will be annotated and
 	     // returned properly.
-	     w := try.To1(os.Create(dst))
+	     w := try.Try1(os.Create(dst))
 	     // Add error handler to clean up the destination file. Place it here that
 	     // the next deferred close is called before our Remove call.
-	     defer err2.Handle(&err, func() {
+	     defer err2.Cleanup(&err, func() {
 	     	os.Remove(dst)
 	     })
 	     defer w.Close()
@@ -38,7 +35,7 @@ them. The CopyFile example shows how it works:
 	     // Try to copy the file. If error occurs now, all previous error handlers
 	     // will be called in the reversed order. And final return error is
 	     // properly annotated in all the cases.
-	     try.To1(io.Copy(w, r))
+	     try.Try1(io.Copy(w, r))
 
 	     // All OK, just return nil.
 	     return nil
@@ -56,32 +53,19 @@ instead of
 
 we can write
 
-	b := try.To1(ioutil.ReadAll(r))
+	b := try.Try1(ioutil.ReadAll(r))
 
 Note that try.ToX functions are as fast as if err != nil statements. Please see
 the try package documentation for more information about the error checks.
 
 # Stack Tracing
 
-err2 offers optional stack tracing. It's automatic. Just set the
-StackTraceWriter to the stream you want traces to be written:
-
-	err2.StackTraceWriter = os.Stderr // write stack trace to stderr
-	 or
-	err2.StackTraceWriter = log.Writer() // stack trace to std logger
+# TODO
 
 # Error handling
 
-Package err2 relies on declarative control structures to achieve error and panic
-safety. In every function which uses err2 or try package for error-checking has
-to have at least one declarative error handler if it returns error value. If
-there are no error handlers and error occurs it panics. We think that panicking
-for the errors is much better than not checking errors at all. Nevertheless, if
-the call stack includes any err2 error handlers like err2.Handle the error is
-handled where the handler is saved to defer-stack. (defer is not lexically
-scoped)
-
-err2 includes many examples to play with like previous CopyFile. Please see them
-for more information.
+The beginning of every function should contain an `err2.Handle*` to ensure that
+errors are caught. Otherwise errors will escape the function as a panic and you
+will be relying on calling functions to properly recover from panics.
 */
 package err2

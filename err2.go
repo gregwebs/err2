@@ -2,34 +2,37 @@ package err2
 
 import (
 	"fmt"
-	"io"
-	"os"
-
-	"github.com/lainio/err2/internal/handler"
+	"runtime"
 )
 
-// StackTraceWriter allows to set automatic stack tracing.
-//
-//	err2.StackTraceWriter = os.Stderr // write stack trace to stderr
-//	 or
-//	err2.StackTraceWriter = log.Writer() // stack trace to std logger
-var StackTraceWriter io.Writer
-
+// A convenience function for usuing a function that
 // Every function using err2/try must defer a Handle* function.
+// These must be used with `defer`
+//
 // If no additional error annotation is desired, 'nil' may be given as the handlerFn
 // Handle is for adding an error handler to a function by deferring. It's for
 // functions returning errors themself. For those functions that don't return
 // errors, there are a CatchXxxx functions. The handler is called only when err
 // != nil. There is no limit how many Handle functions can be added to defer
 // stack. They all are called if an error has occurred and they are in deferred.
-func Handle(err *error, handlerFn func()) {
+func Handle(err *error, handlerFn func() error) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	handleRecover(r, err, handlerFn)
 }
 
-// Handlef is for annotating an error.
-// It's similar to Annotate but it appends ": %v" to the format string
+func Cleanup(err *error, handlerFn func()) {
+	// We need to call `recover` here because of how it works with defer.
+	r := recover()
+	handleRecover(r, err, func() error {
+		handlerFn()
+		return nil
+	})
+}
+
+// Handlef is for annotating an error with a format string.
+// Must be used as a `defer`.
+// It appends ": %v" to the format string
 func Handlef(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
@@ -37,7 +40,8 @@ func Handlef(err *error, prefix string, args ...any) {
 }
 
 // Handlew is for annotating an error.
-// It's similar to Annotate but it appends ": %w" to the format string
+// Must be used as a `defer`.
+// It appends ": %w" to the format string
 func Handlew(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
@@ -45,91 +49,72 @@ func Handlew(err *error, prefix string, args ...any) {
 }
 
 func formatHandler(r any, err *error, format string, args ...any) {
-	handleRecover(r, err, func() {
+	handleRecover(r, err, func() error {
 		args = append(args, *err)
-		*err = fmt.Errorf(format, args...)
+		return fmt.Errorf(format, args...)
 	})
 }
 
-func handleRecover(r any, err *error, handlerFn func()) {
-	// We put real panic objects back and keep only those which are
-	// carrying our errors. We must also call all of the handlers in defer
-	// stack.
-	if handlerFn == nil {
-		handler.Process(handler.Info{
-			Trace:        StackTraceWriter,
-			Any:          r,
-			ErrorHandler: func(e error) { *err = e },
-		})
-	} else {
-		handler.Process(handler.Info{
-			Trace: StackTraceWriter,
-			Any:   r,
-			NilHandler: func() {
-				// Defers are in the stack and the first from the stack gets the
-				// opportunity to get panic object's error (below). We still must
-				// call handler functions to the rest of the handlers if there is
-				// an error.
-				if *err != nil {
-					handlerFn()
-				}
-			},
-			ErrorHandler: func(e error) {
-				// We or someone did transport this error thru panic.
-				*err = e
-				handlerFn()
-			},
-		})
+func handleRecover(r any, err *error, handlerFn func() error) {
+	// Call the handlerFn if possible if the recovery is not nil
+	// If a non-runtime error, use the error and don't panic
+	// Otherwise panic again.
+	shouldPanic := true
+	switch r.(type) {
+	case runtime.Error:
+		// A normal Go panic
+	case error:
+		// A try.CheckX or try.TryX threw an error
+		// assert *err == nil
+		*err = r.(error)
+		shouldPanic = false
+	case nil:
+		// There are multiple Handle* functions.
+		// One already dealt with the error
+		shouldPanic = false
+	}
+	if handlerFn != nil && *err != nil {
+		if newErr := handlerFn(); newErr != nil {
+			*err = newErr
+		}
+	}
+	if shouldPanic {
+		panic(r)
 	}
 }
 
-// Catch is a convenient helper to those functions that doesn't return errors.
-// There can be only one deferred Catch function per non error returning
-// function like main(). It doesn't stop panics and runtime errors. If that's
-// important use CatchAll or CatchTrace instead. See Handle for more
-// information.
-func Catch(f func(err error)) {
-	// This and others are similar but we need to call `recover` here because
-	// how it works with defer.
+// CatchError can be used in a function that does not return an error
+// Must be used with defer
+func CatchError(handlerFn func(error)) {
 	r := recover()
-
-	handler.Process(handler.Info{
-		Trace:        StackTraceWriter,
-		Any:          r,
-		ErrorHandler: f,
+	var err error
+	handleRecover(r, &err, func() error {
+		handlerFn(err)
+		return nil
 	})
 }
 
-// CatchAll is a helper function to catch and write handlers for all errors and
-// all panics thrown in the current go routine. It and CatchTrace are preferred
-// helperr for go workers on long running servers, because they stop panics as
-// well.
-func CatchAll(errorHandler func(err error), panicHandler func(v any)) {
-	// This and others are similar but we need to call `recover` here because
-	// how it works with defer.
-	r := recover()
-
-	handler.Process(handler.Info{
-		Trace:        StackTraceWriter,
-		Any:          r,
-		ErrorHandler: errorHandler,
-		PanicHandler: panicHandler,
-	})
+// ExtracErrorFromRecovery returns a non-runtime error from the recovery object
+func ErrorFromRecovery(r any) error {
+	switch r.(type) {
+	case runtime.Error:
+		return nil
+	case error:
+		return r.(error)
+	default:
+		return nil
+	}
 }
 
-// CatchTrace is a helper function to catch and handle all errors. It also
-// recovers a panic and prints its call stack. It and CatchAll are preferred
-// helpers for go-workers on long-running servers because they stop panics as
-// well.
-func CatchTrace(errorHandler func(err error)) {
-	// This and others are similar but we need to call `recover` here because
-	// how it works with defer.
+// CatchAll can be used in a function that does not return an error
+// It stops panics and gives the panic to the panicHandler
+// CatchAll must be used with defer
+// It uses ErrorFromRecovery to extract errors and give them to the errorHandler
+func CatchAll(errorHandler func(error), panicHandler func(v any)) {
 	r := recover()
-
-	handler.Process(handler.Info{
-		Trace:        os.Stderr,
-		Any:          r,
-		ErrorHandler: errorHandler,
-		PanicHandler: func(v any) {}, // suppress panicking
-	})
+	if err := ErrorFromRecovery(r); err != nil {
+		errorHandler(err)
+	} else {
+		panicHandler(r)
+	}
 }

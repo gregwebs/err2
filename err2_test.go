@@ -79,7 +79,7 @@ func errTry1_Fmt() (err error) {
 }
 
 func errId(err error) error { return err }
-func empty() {}
+func empty() error          { return nil }
 
 func errTry1_id() (err error) {
 	defer err2.Handlef(&err, "handle top")
@@ -130,7 +130,7 @@ func TestDefault_Error(t *testing.T) {
 
 func TestTry_Error(t *testing.T) {
 	var err error
-	defer err2.Handle(&err, func() {})
+	defer err2.Handle(&err, nil)
 
 	try.Check1(throw())
 
@@ -179,6 +179,9 @@ func TestPanickingCatchAll(t *testing.T) {
 }
 
 func TestPanickingCatchTrace(t *testing.T) {
+	noPanic := func(v any) {}
+	noError := func(err error) {}
+
 	type args struct {
 		f func()
 	}
@@ -190,7 +193,7 @@ func TestPanickingCatchTrace(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err2.CatchTrace(func(err error) {})
+					defer err2.CatchAll(noError, noPanic)
 					panic("panic")
 				},
 			},
@@ -199,7 +202,7 @@ func TestPanickingCatchTrace(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err2.CatchTrace(func(err error) {})
+					defer err2.CatchAll(noError, noPanic)
 					var b []byte
 					b[0] = 0
 				},
@@ -232,7 +235,7 @@ func TestPanickingCarryOn_Handle(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Handle(&err, func() {})
+					defer err2.Handle(&err, nil)
 					panic("panic")
 				},
 			},
@@ -242,7 +245,7 @@ func TestPanickingCarryOn_Handle(t *testing.T) {
 			args{
 				func() {
 					var err error
-					defer err2.Handle(&err, func() {})
+					defer err2.Handle(&err, nil)
 					var b []byte
 					b[0] = 0
 				},
@@ -317,7 +320,7 @@ func TestPanicking_Catch(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err2.Catch(func(err error) {})
+					defer err2.CatchError(func(err error) {})
 					panic("panic")
 				},
 			},
@@ -326,7 +329,7 @@ func TestPanicking_Catch(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err2.Catch(func(err error) {})
+					defer err2.CatchError(func(err error) {})
 					var b []byte
 					b[0] = 0
 				},
@@ -347,7 +350,7 @@ func TestPanicking_Catch(t *testing.T) {
 }
 
 func TestCatch_Error(t *testing.T) {
-	defer err2.Catch(func(err error) {
+	defer err2.CatchError(func(err error) {
 		//fmt.Printf("error and defer handling:%s\n", err)
 	})
 
@@ -450,8 +453,8 @@ func ExampleHandlef_deferStack() {
 
 func ExampleHandle_with_handler() {
 	doSomething := func(a, b int) (err error) {
-		defer err2.Handle(&err, func() {
-			err = fmt.Errorf("error with (%d, %d): %v", a, b, err)
+		defer err2.Handle(&err, func() error {
+			return fmt.Errorf("error with (%d, %d): %v", a, b, err)
 		})
 		try.Check1(throw())
 		return err
