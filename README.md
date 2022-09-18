@@ -95,7 +95,7 @@ proposal](https://go.googlesource.com/proposal/+/master/design/go2draft-error-ha
 The package accomplishes error handling internally by using `panic/recovery`, which is less than ideal.
 However, it works out well because:
 
-* benchmarks show that when there is no error, overhead is minimal
+* benchmarks show that when there is no error the overhead is non-existant
 * it helps with properly handling panics
 
 In general code should not pass errors in performance sensitive paths. Normally if it does (for example APIs that use `EOF` as an error), the API is not well designed.
@@ -103,15 +103,15 @@ In general code should not pass errors in performance sensitive paths. Normally 
 The mandatory use of the `defer` might prevent some code optimisations like function inlining.
 If you have highly performance sensitive code it is best not to use this library, particularly in functions that are not benchmarked.
 
-The following form introduces no overhead:
+The following form introduces no overhead in all Go versions:
 
 ``` go
 x, err := f()
 err3.Check(Err)
 ```
 
-This form introduces minimal overhead.
-On My Mac M1 it shows as taking an additional 1.7 nanoseconds, which is 6x slower than the original.
+This form introduces minimal overhead in go 1.19, but in other versions (including go 1.20 which you can verify by setting `GOEXPERIMENT=unified`) introduces no overhead.
+On go 1.19 it shows as taking an additional 1.7 nanoseconds, which is 6x slower than the original.
 
 ``` go
 _ = err3.Check1(f())
