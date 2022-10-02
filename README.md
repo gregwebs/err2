@@ -1,6 +1,6 @@
-# try
+# Go try
 
-The package provides tools for compact and composeable error handling.
+This Go package provides tools for compact and composeable error handling.
 Instead of the traditional:
 
 ``` go
@@ -15,31 +15,6 @@ You can write:
 ``` go
 x := try.Try1(f())(try.Fmt("annotate"))
 ```
-
-## Fork
-
-This is a fork of github.com/lainio/err2 with a different user facing API.
-Internally the panic/recovery mechanism of propagating errors is the same.
-
-Tracing is handled differently.
-There is no automatic mechanism for printing panics, instead users should create
-their own standard way of doing this.
-Errors themselves are wrapped up with a stack trace that can be recovered
-and printed with "%+v".
-The original stack trace printing code is still available under the stackprint module.
-
-
-## Structure
-
-try has the following package structure:
-- The top-level main package try can be imported as try which combines both the try/err3 and try/try packages
-- The `try/err3` package includes declarative error handling functions.
-- The `try/try` package offers error checking functions.
-- The `stackprint` package contains the original code from `err2` to help print stack traces
-- The `assert` package contains the original code from `err2` to help with assertions.
-
-
-## Error checks
 
 The functions `CheckX` and `TryX` are used for checking and handling errors.
 For example, instead of
@@ -59,13 +34,13 @@ b := try.Check1(ioutil.ReadAll(r))
 ...
 ```
 
-But they do require a deferred error handler at the top of the function.
+These function require a deferred error handler at the top of the function.
 
 
 ## Error handling
 
-Every function which uses try for error-checking should have at least one
-`try.Handle*` function declared with `defer`. These functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
+Every function which uses try for error-checking should have at least one deferred
+`try.Handle*` function. `try` propagates errors via a panic, and these functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
 
 This is the simplest form of `try.Handle*`.
 
@@ -82,6 +57,29 @@ There is also
 * `HandleCleanup`: call a cleanup function
 
 There are also helpers `CatchError`, `CatchAll`, and `ErrorFromRecovery` that are useful for catching errors and panics in functions that do not return errors. These are generally callbacks, goroutines, and main.
+
+
+## Structure
+
+try has the following package structure:
+- The top-level main package try can be imported as try which combines both the try/err3 and try/try packages
+- The `try/err3` package includes declarative error handling functions.
+- The `try/try` package offers error checking functions.
+- The `stackprint` package contains the original code from `err2` to help print stack traces
+- The `assert` package contains the original code from `err2` to help with assertions.
+
+
+## Fork
+
+This is a fork of github.com/lainio/err2 with a different user facing API.
+Internally the panic/recovery mechanism of propagating errors is the same.
+
+Tracing is handled differently.
+There is no automatic mechanism for printing panics, instead users should create
+their own standard way of doing this.
+Errors themselves are wrapped up with a stack trace that can be recovered
+and printed with "%+v".
+The original stack trace printing code is still available under the stackprint module.
 
 
 ## Background
