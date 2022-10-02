@@ -1,4 +1,4 @@
-# err3
+# try
 
 The package provides tools for compact and composeable error handling.
 Instead of the traditional:
@@ -13,7 +13,7 @@ if err != nil {
 You can write:
 
 ``` go
-x := err3.Try1(f())(err3.Fmt("annotate"))
+x := try.Try1(f())(try.Fmt("annotate"))
 ```
 
 ## Fork
@@ -31,10 +31,10 @@ The original stack trace printing code is still available under the stackprint m
 
 ## Structure
 
-err3 has the following package structure:
-- The top-level main package err3 can be imported as err3 which combines both the err3/err3 and err3/try packages
-- The `err3/err3` package includes declarative error handling functions.
-- The `err3/try` package offers error checking functions.
+try has the following package structure:
+- The top-level main package try can be imported as try which combines both the try/err3 and try/try packages
+- The `try/err3` package includes declarative error handling functions.
+- The `try/try` package offers error checking functions.
 - The `stackprint` package contains the original code from `err2` to help print stack traces
 - The `assert` package contains the original code from `err2` to help with assertions.
 
@@ -55,7 +55,7 @@ if err != nil {
 we can call
 
 ```go
-b := err3.Check1(ioutil.ReadAll(r))
+b := try.Check1(ioutil.ReadAll(r))
 ...
 ```
 
@@ -64,14 +64,14 @@ But they do require a deferred error handler at the top of the function.
 
 ## Error handling
 
-Every function which uses err3 for error-checking should have at least one
-`err3.Handle*` function declared with `defer`. These functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
+Every function which uses try for error-checking should have at least one
+`try.Handle*` function declared with `defer`. These functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
 
-This is the simplest form of `err3.Handle*`.
+This is the simplest form of `try.Handle*`.
 
 ```go
 func do() error {
-	defer err3.Handlef(&err, "do")
+	defer try.Handlef(&err, "do")
 	...
 }
 ```
@@ -90,7 +90,7 @@ The original `err2` implements similar error handling mechanism as drafted in th
 [check/handle
 proposal](https://go.googlesource.com/proposal/+/master/design/go2draft-error-handling-overview.md).
 
-`err3` encourages the single use of a `defer` statement at the top of the function and then using the `err3.TryX` functions to explicitly declare the error handlers for a function, similar to this [new proposal](https://github.com/golang/go/issues/55026). 
+`try` encourages the single use of a `defer` statement at the top of the function and then using the `try.TryX` functions to explicitly declare the error handlers for a function, similar to this [new proposal](https://github.com/golang/go/issues/55026). 
 
 The package accomplishes error handling internally by using `panic/recovery`, which is less than ideal.
 However, it works out well because:
@@ -107,14 +107,14 @@ The following form introduces no overhead in all Go versions:
 
 ``` go
 x, err := f()
-err3.Check(Err)
+try.Check(Err)
 ```
 
 This form introduces minimal overhead in go 1.19, but in other versions (including go 1.20 which you can verify by setting `GOEXPERIMENT=unified`) introduces no overhead.
 On go 1.19 it shows as taking an additional 1.7 nanoseconds, which is 6x slower than the original.
 
 ``` go
-_ = err3.Check1(f())
+_ = try.Check1(f())
 ```
 
 #### Automatic And Optimized Stack Tracing

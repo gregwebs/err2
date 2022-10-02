@@ -8,14 +8,13 @@ If the error is not nil it is automatically thrown via panic.
 It is then caught by 'Handle'
 
 	  import (
-		"github.com/gregwebs/err3"
-		_ "github.com/gregwebs/try"
+		"github.com/gregwebs/try"
 	  )
 
 	  func do() (err error) {
-	    defer err3.Handlew(&err, "do")
+	    defer try.Handlew(&err, "do")
 
-	    x := Try1(f())(Formatw("called f"))
+	    x := try.Try1(f())(Formatw("called f"))
 	  }
 
 Package try is a package for try.TryX functions that implement the error
@@ -41,6 +40,7 @@ package try
 
 import (
 	"fmt"
+
 	"github.com/pingcap/errors"
 )
 
@@ -71,13 +71,13 @@ func Cleanup(handler func()) func(error) error {
 // It replaces the following code:
 //
 //	err := f()
-// 	if err != nil {
+//	if err != nil {
 //		return handler(err)
 //	}
 //
 // With this code:
 //
-// 	try.Try(f(), handler)
+//	try.Try(f(), handler)
 //
 // If the error value nil, it is a noop
 // If the error value is non-nil, the handler functions will be applied to the error
@@ -120,13 +120,13 @@ func Try[E error](errE E, handler func(E) error, handlers ...func(error) error) 
 // It replaces the following code:
 //
 //	x, err := f()
-// 	if err != nil {
+//	if err != nil {
 //		return handler(err)
 //	}
 //
 // With this code:
 //
-// 	x := try.Try1(f())(handler)
+//	x := try.Try1(f())(handler)
 func Try1[T any, E error](v T, err E) func(func(E) error, ...func(error) error) T {
 	return func(handler func(E) error, handlers ...func(error) error) T {
 		if error(err) != nil {

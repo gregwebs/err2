@@ -5,12 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/gregwebs/err3/err3"
-	"github.com/gregwebs/err3/try"
-)
-
-var (
-	errForTesting = fmt.Errorf("error for %s", "testing")
+	"github.com/gregwebs/try/err3"
+	"github.com/gregwebs/try/try"
 )
 
 func Example_copyFile() {

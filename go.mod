@@ -1,6 +1,6 @@
-module github.com/gregwebs/err3
+module github.com/gregwebs/try
 
-replace github.com/gregwebs/err3 => ./err3
+replace github.com/gregwebs/try => ./try
 
 go 1.18
 

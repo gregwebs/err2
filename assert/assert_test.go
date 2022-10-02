@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gregwebs/err3/assert"
-	"github.com/gregwebs/err3/err3"
+	"github.com/gregwebs/try/assert"
+	"github.com/gregwebs/try/err3"
 )
 
 func ExampleAsserter_True() {

@@ -66,4 +66,4 @@ The beginning of every function should contain an `err3.Handle*` to ensure that
 errors are caught. Otherwise errors will escape the function as a panic and you
 will be relying on calling functions to properly recover from panics.
 */
-package err3
+package try

@@ -5,9 +5,10 @@ import (
 	"runtime"
 )
 
-// A convenience function for usuing a function that
-// Every function using err3/try must defer a Handle* function.
-// These must be used with `defer`
+// Handle handles any errors with a given handler function
+//
+// Every function using Try*/Check* must defer a Handle* function.
+// Handle* functions must be used with `defer`
 //
 // If no additional error annotation is desired, 'nil' may be given as the handlerFn
 // Handle is for adding an error handler to a function by deferring. It's for
@@ -21,6 +22,8 @@ func Handle(err *error, handlerFn func() error) {
 	handleRecover(r, err, handlerFn)
 }
 
+// HandleCleanup is a convenience function for using a handler that does not return an error.
+// Must be used as a `defer`.
 func HandleCleanup(err *error, handlerFn func()) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
@@ -30,7 +33,7 @@ func HandleCleanup(err *error, handlerFn func()) {
 	})
 }
 
-// Handlef is for annotating an error with a format string.
+// Handlef is for handling errors by annotating them with a format string.
 // Must be used as a `defer`.
 // It appends ": %v" to the format string
 func Handlef(err *error, prefix string, args ...any) {
@@ -60,13 +63,13 @@ func handleRecover(r any, err *error, handlerFn func() error) {
 	// If a non-runtime error, use the error and don't panic
 	// Otherwise panic again.
 	shouldPanic := true
-	switch r.(type) {
+	switch r := r.(type) {
 	case runtime.Error:
 		// A normal Go panic
 	case error:
 		// A try.CheckX or try.TryX threw an error
 		// assert *err == nil
-		*err = r.(error)
+		*err = r
 		shouldPanic = false
 	case nil:
 		// There are multiple Handle* functions.
@@ -94,27 +97,29 @@ func CatchError(handlerFn func(error)) {
 	})
 }
 
-// ErrorFromRecovery returns a non-runtime error from the recovery object
-func ErrorFromRecovery(r any) error {
-	switch r.(type) {
-	case runtime.Error:
-		return nil
-	case error:
-		return r.(error)
-	default:
-		return nil
-	}
-}
-
 // CatchAll can be used in a function that does not return an error
-// It stops panics and gives the panic to the panicHandler
-// CatchAll must be used with defer
-// It uses ErrorFromRecovery to extract errors and give them to the errorHandler
+// Must be used with defer
+//
+// CatchAll stops panics and gives the panic to the panicHandler
+// It uses ErrorFromRecover to extract errors and give them to the errorHandler
 func CatchAll(errorHandler func(error), panicHandler func(v any)) {
 	r := recover()
-	if err := ErrorFromRecovery(r); err != nil {
+	if err := ErrorFromRecover(r); err != nil {
 		errorHandler(err)
 	} else {
 		panicHandler(r)
+	}
+}
+
+// ErrorFromRecover extracts a non-runtime error from the recovery object
+// Otherwise it returns nil
+func ErrorFromRecover(r any) error {
+	switch r := r.(type) {
+	case runtime.Error:
+		return nil
+	case error:
+		return r
+	default:
+		return nil
 	}
 }

@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gregwebs/err3/err3"
-	"github.com/gregwebs/err3/try"
+	"github.com/gregwebs/try/err3"
+	"github.com/gregwebs/try/try"
 )
 
 func throw() (string, error) {
