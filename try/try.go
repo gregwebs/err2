@@ -41,7 +41,7 @@ package try
 import (
 	"fmt"
 
-	"github.com/pingcap/errors"
+	"github.com/gregwebs/errors"
 )
 
 var AddStackTrace bool = true
