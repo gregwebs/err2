@@ -49,3 +49,4 @@ godoc:
 
 build:
 	cat err3/err3.go | sed 's|package err3|package try|' > err3.go
+	cp try/try.go .
