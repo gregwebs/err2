@@ -18,5 +18,5 @@ rules:
       $ERR := $IF_EXPR
       try.Check($ERR)
     }
-
+ 
   severity: WARNING

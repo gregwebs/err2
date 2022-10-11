@@ -8,10 +8,16 @@ cp case/$RULE/input.go result/$RULE/
 # First build the test case to prove it is valid Go
 go build result/$RULE/input.go
 # when autofixing, rules must be applied individually
-for rule in rules/$1/* ; do
+for rule in semgrep/rules/$1/* ; do
 	  echo semgrep --config "$rule" "result/$1/input.go" --autofix
 	  semgrep --config "$rule" "result/$1/input.go" --autofix
 done
+
+# Comby fixes
+comby -in-place -config "./comby/$1.toml" -f "result/$1/input.go"
+# Cannot implement in just one pass
+comby -in-place -config "./comby/$1.toml" -f "result/$1/input.go"
+
 # Fix imports
 goimports -w result/$RULE/input.go
 # Compare to golden

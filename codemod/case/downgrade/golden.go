@@ -17,17 +17,24 @@ type addresses struct {
 	UpdatedAt string
 }
 
-func (i addresses) switchParse(b []byte) (interface{}, error) {
-	defer try.Handle(&err, nil)
+func (i addresses) switchParse(b []byte) (_ interface{}, err error) {
 	var d addresses
-	err := json.Unmarshal(b, &d)
-	try.Check(err)
+	err = json.Unmarshal(b, &d)
+	if err != nil {
+		return try.Zero[interface{}](), err
+	}
 	id, err := strconv.ParseInt(d.ID, 10, 64)
-	try.Check(err)
+	if err != nil {
+		return try.Zero[interface{}](), err
+	}
 	cr, err := time.Parse(idxTimeFmt, d.CreatedAt)
-	try.Check(err)
+	if err != nil {
+		return try.Zero[interface{}](), err
+	}
 	ud, err := time.Parse(idxTimeFmt, d.UpdatedAt)
-	try.Check(err)
+	if err != nil {
+		return try.Zero[interface{}](), err
+	}
 	s := struct {
 		id int64
 		cr time.Time
@@ -40,11 +47,10 @@ func (i addresses) switchParse(b []byte) (interface{}, error) {
 	return &s, nil
 }
 
-func ifErr() (bool, error) {
-	defer try.Handle(&err, nil)
-	{
-		err := errors.New("test if")
-		try.Check(err)
+func ifErr() (_ bool, err error) {
+	err = errors.New("test if")
+	if err != nil {
+		return try.Zero[bool](), err
 	}
 	return true, nil
 }

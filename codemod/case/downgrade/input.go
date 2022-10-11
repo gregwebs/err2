@@ -21,21 +21,13 @@ func (i addresses) switchParse(b []byte) (_ interface{}, err error) {
 	defer try.Handle(&err, nil)
 	var d addresses
 	err = json.Unmarshal(b, &d)
-	if err != nil {
-		return try.Zero[interface{}](), err
-	}
+	try.Check(err)
 	id, err := strconv.ParseInt(d.ID, 10, 64)
-	if err != nil {
-		return try.Zero[interface{}](), err
-	}
+	try.Check(err)
 	cr, err := time.Parse(idxTimeFmt, d.CreatedAt)
-	if err != nil {
-		return try.Zero[interface{}](), err
-	}
+	try.Check(err)
 	ud, err := time.Parse(idxTimeFmt, d.UpdatedAt)
-	if err != nil {
-		return try.Zero[interface{}](), err
-	}
+	try.Check(err)
 	s := struct {
 		id int64
 		cr time.Time
@@ -50,11 +42,7 @@ func (i addresses) switchParse(b []byte) (_ interface{}, err error) {
 
 func ifErr() (_ bool, err error) {
 	defer try.Handle(&err, nil)
-	{
-		err := errors.New("test if")
-		if err != nil {
-			return try.Zero[bool](), err
-		}
-	}
+	err = errors.New("test if")
+	try.Check(err)
 	return true, nil
 }

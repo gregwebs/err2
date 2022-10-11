@@ -1,0 +1,50 @@
+[remove-empty-handle-fn]
+match='''
+func :[fn.](:[args]) (:[returns]) {
+	defer try.Handle(&:[err], nil)
+	:[body]
+}'''
+rule='''where
+match :[body] {
+| ":[~try\.Check]" -> false
+| ":[~try\.Try]" -> false
+| ":[_]" -> true
+}'''
+rewrite='''
+func :[fn.](:[args]) (:[returns]) {
+	:[body]
+}'''
+
+[remove-empty-handle-method]
+match='''
+func (:[receiver]) :[fn.](:[args]) (:[returns]) {
+	defer try.Handle(&:[err], nil)
+	:[body]
+}'''
+rule='''where
+match :[body] {
+| ":[~try\.Check]" -> false
+| ":[~try\.Try]" -> false
+| ":[_]" -> true
+}'''
+rewrite='''
+func (:[receiver]) :[fn.](:[args]) (:[returns]) {
+	:[body]
+}'''
+
+[remove-empty-handle-lambda]
+match='''
+func (:[args]) (:[returns]) {
+	defer try.Handle(&:[err], nil)
+	:[body]
+}'''
+rule='''where
+match :[body] {
+| ":[~try\.Check]" -> false
+| ":[~try\.Try]" -> false
+| ":[_]" -> true
+}'''
+rewrite='''
+func (:[args]) (:[returns]) {
+	:[body]
+}'''
