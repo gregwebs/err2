@@ -103,58 +103,55 @@ func :[fn.](:[args]) (:[returns], err error) {
 [handle-fix-no-new-variables-method]
 match='''
 func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
-	:[body_before]
-	:[err_var~\S+] := :[rest]
+	:[body_before]:[n\n]
+	err := :[rest]
 	:[body_after]
 }'''
+# don't match a block scope.
+# This doesn't work for multi-line
+# It works with the Semgrep transformation rule
 rule='''
-where match :[err_var] {
-| ":[~err]" -> true
-| ":[_]" -> false
-}
-'''
+where match :[n] {
+| ":[~\{]" -> false
+| ":[_]" -> true
+}'''
 rewrite='''
 func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
-	:[body_before]
-	:[err_var] = :[rest]
+	:[body_before]:[n]err = :[rest]
 	:[body_after]
 }'''
 
 [handle-fix-no-new-variables-fn]
 match='''
 func :[fn.](:[args]) (:[returns], err error) {
-	:[body_before]
-	:[err_var~\S+] := :[rest]
+	:[body_before]:[n\n]
+	err := :[rest]
 	:[body_after]
 }'''
 rule='''
-where match :[err_var] {
-| ":[~err]" -> true
-| ":[_]" -> false
-}
-'''
+where match :[n] {
+| ":[~\{]" -> false
+| ":[_]" -> true
+}'''
 rewrite='''
 func :[fn.](:[args]) (:[returns], err error) {
-	:[body_before]
-	:[err_var] = :[rest]
+	:[body_before]:[n]err = :[rest]
 	:[body_after]
 }'''
 [handle-fix-no-new-variables-lambda]
 match='''
 func(:[args]) (:[returns], err error) {
-	:[body_before]
-	:[err_var~\S+] := :[rest]
+	:[body_before]:[n\n]
+	err := :[rest]
 	:[body_after]
 }'''
 rule='''
-where match :[err_var] {
-| ":[~err]" -> true
-| ":[_]" -> false
-}
-'''
+where match :[n] {
+| ":[~\{]" -> false
+| ":[_]" -> true
+}'''
 rewrite='''
-func :[fn.](:[args]) (:[returns], err error) {
-	:[body_before]
-	:[err_var] = :[rest]
+func(:[args]) (:[returns], err error) {
+	:[body_before]:[n]err = :[rest]
 	:[body_after]
 }'''
