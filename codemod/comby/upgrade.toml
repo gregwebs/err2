@@ -37,7 +37,7 @@ func (:[receiver]) :[fn.](:[args]) (:[returns], error) {
 
 [remove-empty-handle-lambda]
 match='''
-func (:[args]) (:[returns], error) {
+func(:[args]) (:[returns], error) {
 	:[body]
 }'''
 rule='''where
@@ -61,7 +61,7 @@ func (:[receiver]) :[fn.](:[args]) (:[returns], error) {
 	:[body]
 }'''
 rule='''
-where rewrite :[returns] { ":[[r]]" -> "_ :[r]" }
+where rewrite :[returns] { ":[r~[^,]+]" -> "_ :[r]" }
 '''
 rewrite='''
 func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
@@ -75,7 +75,7 @@ func :[fn.](:[args]) (:[returns], error) {
 	:[body]
 }'''
 rule='''
-where rewrite :[returns] { ":[[r]]" -> "_ :[r]" }
+where rewrite :[returns] { ":[r~[^,]+]" -> "_ :[r]" }
 '''
 rewrite='''
 func :[fn.](:[args]) (:[returns], err error) {
@@ -85,12 +85,12 @@ func :[fn.](:[args]) (:[returns], err error) {
 
 [handle-add-named-variables-lambda]
 match='''
-func (:[args]) (:[returns], error) {
+func(:[args]) (:[returns], error) {
 	defer try.Handle:[handle_args]
 	:[body]
 }'''
 rule='''
-where rewrite :[returns] { ":[[r]]" -> "_ :[r]" }
+where rewrite :[returns] { ":[r~[^,]+]" -> "_ :[r]" }
 '''
 rewrite='''
 func :[fn.](:[args]) (:[returns], err error) {
@@ -108,6 +108,33 @@ func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
 }'''
 rewrite='''
 func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
+	:[body_before]
+	err = :[rest]
+	:[body_after]
+}'''
+
+[handle-fix-no-new-variables-fn]
+match='''
+func :[fn.](:[args]) (:[returns], err error) {
+	:[body_before]
+	err := :[rest]
+	:[body_after]
+}'''
+rewrite='''
+func :[fn.](:[args]) (:[returns], err error) {
+	:[body_before]
+	err = :[rest]
+	:[body_after]
+}'''
+[handle-fix-no-new-variables-lambda]
+match='''
+func(:[args]) (:[returns], err error) {
+	:[body_before]
+	err := :[rest]
+	:[body_after]
+}'''
+rewrite='''
+func :[fn.](:[args]) (:[returns], err error) {
 	:[body_before]
 	err = :[rest]
 	:[body_after]

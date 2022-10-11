@@ -26,18 +26,23 @@ if [[ $# -lt 2 ]] ; then
 	exit 0
 fi
 
-cd "$(dirname "$0")"
+pushd "$(dirname "$0")"
 dir=$(pwd)
+popd
+
 RULE="$1"
 shift
 
-for rule in semgrep/rules/$RULE/* ; do
-	  echo semgrep --config "$rule" --autofix "$@"
-	  semgrep --config "$rule" --autofix "$@"
+for rule in "$dir/semgrep/rules/$RULE/"* ; do
+	  echo semgrep -l go --config "$rule" --autofix "$@"
+	  semgrep -l go --config "$rule" --autofix "$@"
 done
 
 # Comby fixes
-comby -in-place -config "./comby/$RULE.toml" -f "$@"
+comby -in-place -config "$dir/comby/$RULE.toml" -f "$@"
 # Cannot implement in just one pass
-comby -in-place -config "./comby/$RULE.toml" -f "$@"
+comby -in-place -config "$dir/comby/$RULE.toml" -f "$@"
 
+# Fix imports
+goimports -w "$@"
+gofmt -w "$@"

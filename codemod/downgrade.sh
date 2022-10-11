@@ -9,4 +9,8 @@ if [[ $# -lt 1 ]] ; then
 	exit 0
 fi
 
-exec apply-rule.sh downgrade "$@"
+pushd "$(dirname "$0")"
+dir=$(pwd)
+popd
+
+exec "$dir/apply-rule.sh" downgrade "$@"

@@ -11,9 +11,6 @@ go build "$output"
 
 ./apply-rule.sh $RULE "$output"
 
-# Fix imports
-goimports -w "$output"
-
 # Compare to golden
 diff "$output" case/$RULE/golden.go
 # Prove the golden case compiles
