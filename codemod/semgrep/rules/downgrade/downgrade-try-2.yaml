@@ -1,0 +1,21 @@
+rules:
+- id: downgrade-try-2
+  languages:
+    - go
+  message: |
+    downgrade from using try.Try return 2
+  patterns:
+    - pattern-inside: |
+        func $F(...) (T, U, error) {
+          ...
+        }
+    - pattern: |
+        try.Try($ERR, $TRY_EXPR)
+  fix: |
+      if $ERR != nil {
+        return try.Zero[T](), try.Zero[U](), $TRY_EXPR($ERR)
+      }
+
+  severity: WARNING
+
+

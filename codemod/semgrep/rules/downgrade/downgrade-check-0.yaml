@@ -1,0 +1,19 @@
+rules:
+- id: downgrade-errors-0-if
+  message: |
+    downgrade from using try.Check
+  patterns:
+    - pattern-inside: |
+        func $F(...) (error) {
+          ...
+        }
+    - pattern: |
+        try.Check($ERR)
+  fix: |
+      if $ERR != nil {
+        return $ERR
+      }
+
+  languages:
+    - go
+  severity: WARNING

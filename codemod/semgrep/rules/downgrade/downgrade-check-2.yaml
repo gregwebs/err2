@@ -1,0 +1,20 @@
+rules:
+- id: upgrade-errors-0-if
+  languages:
+    - go
+  message: |
+    downgrade from using try.Check
+  patterns:
+    - pattern-inside: |
+        func $F(...) ($T, $U, error) {
+          ...
+        }
+    - pattern: |
+        try.Check($ERR)
+    # Bug: The entire if statements gets replaced
+  fix: |
+      if $ERR != nil {
+        return try.Zero[$T](), try.Zero[$U](), $ERR
+      }
+
+  severity: WARNING
