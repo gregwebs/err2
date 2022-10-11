@@ -1,14 +1,6 @@
 test:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	go build case/ifelse.go
-	cp case/ifelse.go result/ifelse.go
-	cp case/ifelse.fixed.go result/ifelse.fixed.go
-	for rule in rules/* ; do
-	  echo semgrep --config "$rule" result/ifelse.go --autofix
-	  semgrep --config "$rule" result/ifelse.go --autofix
+	for case in case/* ; do
+	  ./test-golden.sh "$(basename "$case")"
 	done
-	goimports -w result/ifelse.go
-	diff result/ifelse.go result/ifelse.fixed.go
-	rm result/ifelse.go
-	go build result/ifelse.fixed.go
