@@ -123,3 +123,14 @@ func ErrorFromRecover(r any) error {
 		return nil
 	}
 }
+
+// Zero produces a zero value for a type
+// This is made available to automate downgrading from this package
+// When using the try.Check/Try functions, zero values are generated automatically by Golang
+// When downgrading, you need to either manually construct zero values or you can automate with the help of this function
+// For example, given the following code: function(err error) (bool, error) { try.Check(err), ... }
+// The try.Check can be translated to if err != nil { return try.Zero(TYPE), err }
+func Zero[Z any]() Z {
+	var x Z
+	return x
+}

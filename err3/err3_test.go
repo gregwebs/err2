@@ -6,9 +6,18 @@ import (
 	"os"
 	"testing"
 
+	"github.com/gregwebs/try/assert"
 	"github.com/gregwebs/try/err3"
 	"github.com/gregwebs/try/try"
 )
+
+type zeroStruct struct{}
+
+func TestZero(t *testing.T) {
+	assert.Equal(false, err3.Zero[bool]())
+	assert.That(nil == err3.Zero[interface{}](), "zero interface{}")
+	assert.Equal(zeroStruct{}, err3.Zero[zeroStruct](), "zero struct")
+}
 
 func throw() (string, error) {
 	return "", fmt.Errorf("this is an ERROR")
