@@ -13,10 +13,11 @@ if err != nil {
 You can write:
 
 ``` go
-x := try.Try1(f())(try.Fmt("annotate"))
+x, err := f()
+try.Try(err, try.Fmt("annotate"))
 ```
 
-The functions `CheckX` and `TryX` are used for checking and handling errors.
+The functions `Check` and `Try` are used for checking and handling errors.
 For example, instead of
 
 ```go
@@ -30,8 +31,8 @@ if err != nil {
 we can call
 
 ```go
-b := try.Check1(ioutil.ReadAll(r))
-...
+b, err := ioutil.ReadAll(r)
+try.Check(err)
 ```
 
 These function require a deferred error handler at the top of the function.
@@ -45,8 +46,8 @@ Every function which uses try for error-checking should have at least one deferr
 This is the simplest form of `try.Handle*`.
 
 ```go
-func do() error {
-	defer try.Handlef(&err, "do")
+func do() (err error) {
+	defer try.Handle(&err, nil)
 	...
 }
 ```
@@ -108,14 +109,7 @@ x, err := f()
 try.Check(Err)
 ```
 
-This form introduces minimal overhead in go 1.19, but in other versions (including go 1.20 which you can verify by setting `GOEXPERIMENT=unified`) introduces no overhead.
-On go 1.19 it shows as taking an additional 1.7 nanoseconds, which is 6x slower than the original.
-
-``` go
-_ = try.Check1(f())
-```
-
 #### Automatic And Optimized Stack Tracing
 
-By default, TryX and CheckX will wrap the error so that it has a stack trace
+By default, Try and Check will wrap the error so that it has a stack trace
 This can be disabled by setting the `AddStackTrace = false`
