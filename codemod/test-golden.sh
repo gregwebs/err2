@@ -6,23 +6,19 @@ RULE="$1"
 mkdir -p result/$RULE/
 cp case/$RULE/input.go result/$RULE/
 # First build the test case to prove it is valid Go
-go build result/$RULE/input.go
-# when autofixing, rules must be applied individually
-for rule in semgrep/rules/$1/* ; do
-	  echo semgrep --config "$rule" "result/$1/input.go" --autofix
-	  semgrep --config "$rule" "result/$1/input.go" --autofix
-done
+output="result/$RULE/input.go"
+go build "$output"
 
-# Comby fixes
-comby -in-place -config "./comby/$1.toml" -f "result/$1/input.go"
-# Cannot implement in just one pass
-comby -in-place -config "./comby/$1.toml" -f "result/$1/input.go"
+./apply-rule.sh $RULE "$output"
 
 # Fix imports
-goimports -w result/$RULE/input.go
+goimports -w "$output"
+
 # Compare to golden
-diff result/$RULE/input.go case/$RULE/golden.go
+diff "$output" case/$RULE/golden.go
 # Prove the golden case compiles
-go build result/$RULE/input.go
+go build "$output"
+
 # Cleanup
-rm result/$RULE/input.go 
+# If we fail before here, leave the file so it can be inspected
+rm "$output"
