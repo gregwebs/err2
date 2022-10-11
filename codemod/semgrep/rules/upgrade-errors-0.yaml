@@ -1,0 +1,27 @@
+rules:
+- id: upgrade-errors-0
+  languages:
+    - go
+  message: |
+    upgrade to using try.Check
+  patterns:
+    - pattern-inside: |
+        func $F(...) (..., error) {
+          ...
+        }
+    - pattern-inside: |
+        $ERR := ...
+        ...
+        if $ERR != nil {
+          return ..., $ERR
+        }
+    - pattern: |
+        if $ERR != nil {
+          return ..., $ERR
+        }
+    # Bug: The entire if statements gets replaced
+    - pattern-not-regex: if[^{]*:=[^{]*\{
+  fix: |
+    try.Check($ERR)
+
+  severity: WARNING

@@ -1,0 +1,12 @@
+[fix-try-1]
+match="try.Fmtw(:[msg], :[deleted~[, ]+])"
+rewrite="try.Fmtw(:[msg])"
+# rule='where :[arguments] =~ /, /'
+
+[fix-try-2]
+match="try.Fmtw(:[msg], :[args] :[deleted~[, ]+])"
+rewrite="try.Fmtw(:[msg], :[args])"
+
+[fix-try-3]
+match="try.Fmtw(:[msg], :[deleted~[, ]+], :[rest])"
+rewrite="try.Fmtw(:[msg], :[rest])"
