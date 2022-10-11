@@ -1,3 +1,4 @@
+# As a unwarnted side effect this appears to remove comments at the top of the function body
 [add-handle-fn]
 match='''
 func :[fn.](:[args]) (:[returns], error) {
@@ -103,13 +104,19 @@ func :[fn.](:[args]) (:[returns], err error) {
 match='''
 func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
 	:[body_before]
-	err := :[rest]
+	:[err_var~\S+] := :[rest]
 	:[body_after]
 }'''
+rule='''
+where match :[err_var] {
+| ":[~err]" -> true
+| ":[_]" -> false
+}
+'''
 rewrite='''
 func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
 	:[body_before]
-	err = :[rest]
+	:[err_var] = :[rest]
 	:[body_after]
 }'''
 
@@ -117,25 +124,37 @@ func (:[receiver]) :[fn.](:[args]) (:[returns], err error) {
 match='''
 func :[fn.](:[args]) (:[returns], err error) {
 	:[body_before]
-	err := :[rest]
+	:[err_var~\S+] := :[rest]
 	:[body_after]
 }'''
+rule='''
+where match :[err_var] {
+| ":[~err]" -> true
+| ":[_]" -> false
+}
+'''
 rewrite='''
 func :[fn.](:[args]) (:[returns], err error) {
 	:[body_before]
-	err = :[rest]
+	:[err_var] = :[rest]
 	:[body_after]
 }'''
 [handle-fix-no-new-variables-lambda]
 match='''
 func(:[args]) (:[returns], err error) {
 	:[body_before]
-	err := :[rest]
+	:[err_var~\S+] := :[rest]
 	:[body_after]
 }'''
+rule='''
+where match :[err_var] {
+| ":[~err]" -> true
+| ":[_]" -> false
+}
+'''
 rewrite='''
 func :[fn.](:[args]) (:[returns], err error) {
 	:[body_before]
-	err = :[rest]
+	:[err_var] = :[rest]
 	:[body_after]
 }'''
