@@ -19,12 +19,14 @@ them. The CopyFile example shows how it works:
 
 	     // Try to open the file. If error occurs now, err will be annotated and
 	     // returned properly thanks to above err3.Returnf.
-	     r := try.Check1(os.Open(src))
+	     r, err := os.Open(src)
+	     try.Check(err)
 	     defer r.Close()
 
 	     // Try to create a file. If error occurs now, err will be annotated and
 	     // returned properly.
-	     w := try.Try1(os.Create(dst))(try.Cleanup(func() {
+	     w, err := os.Create(dst)
+	     try.Try(err, try.Cleanup(func() {
 	     	os.Remove(dst)
 	     })
 	     defer w.Close()
@@ -32,7 +34,8 @@ them. The CopyFile example shows how it works:
 	     // Try to copy the file. If error occurs now, all previous error handlers
 	     // will be called in the reversed order. And final return error is
 	     // properly annotated in all the cases.
-	     _ = try.Check1(io.Copy(w, r))
+	     _, err = io.Copy(w, r)
+	     try.Check(err)
 
 	     // All OK, just return nil.
 	     return nil
@@ -50,14 +53,12 @@ instead of
 
 we can write
 
-	b := try.Check1(ioutil.ReadAll(r))
-
-Note that try.ToX functions are as fast as if err != nil statements. Please see
-the try package documentation for more information about the error checks.
+	b, err := ioutil.ReadAll(r)
+	try.Check(err)
 
 # Stack Tracing
 
-By default, TryX and CheckX will wrap the error so that it has a stack trace
+By default, try.Try and try.Check will wrap the error so that it has a stack trace
 This can be disabled by setting the `AddStackTrace = false`
 
 # Error handling

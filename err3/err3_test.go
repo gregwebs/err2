@@ -34,10 +34,11 @@ func recursion(a int) (r int, err error) {
 	if a == 0 {
 		return 0, nil
 	}
-	s := try.Check1(noThrow())
+	s, err := noThrow()
 	try.Check(err)
 	_ = s
-	r = try.Check1(recursion(a - 1))
+	r, err = recursion(a - 1)
+	try.Check(err)
 	r += a
 	return r, nil
 }
@@ -46,7 +47,8 @@ func cleanRecursion(a int) int {
 	if a == 0 {
 		return 0
 	}
-	s := try.Check1(noThrow())
+	s, err := noThrow()
+	try.Check(err)
 	_ = s
 	return a + cleanRecursion(a-1)
 }
@@ -70,20 +72,26 @@ func recursionWithErrorCheck(a int) (int, error) {
 func errHandlefOnly() (err error) {
 	defer err3.Handlef(&err, "handle top")
 	defer err3.Handlef(&err, "handle error")
-	_ = try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 	defer err3.Handlef(&err, "handle error")
-	_ = try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 	defer err3.Handlef(&err, "handle error")
-	_ = try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 	return err
 }
 
 func errTry1_Fmt() (err error) {
 	defer err3.Handlef(&err, "handle top")
 	// _ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
-	_ = try.Try1(throw())(try.Fmt("handle error"))
-	_ = try.Try1(throw())(try.Fmt("handle error"))
-	_ = try.Try1(throw())(try.Fmt("handle error"))
+	_, err = throw()
+	try.Try(err, try.Fmt("handle error"))
+	_, err = throw()
+	try.Try(err, try.Fmt("handle error"))
+	_, err = throw()
+	try.Try(err, try.Fmt("handle error"))
 	return err
 }
 
@@ -92,28 +100,37 @@ func empty() error          { return nil }
 
 func errTry1_id() (err error) {
 	defer err3.Handlef(&err, "handle top")
-	_ = try.Try1(throw())(errId)
-	_ = try.Try1(throw())(errId)
-	_ = try.Try1(throw())(errId)
+	_, err = throw()
+	try.Try(err, errId)
+	_, err = throw()
+	try.Try(err, errId)
+	_, err = throw()
+	try.Try(err, errId)
 	return err
 }
 
 func errHandle_Only() (err error) {
 	defer err3.Handlef(&err, "handle top")
 	defer err3.Handle(&err, empty)
-	_ = try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 	defer err3.Handle(&err, empty)
-	_ = try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 	defer err3.Handle(&err, empty)
-	_ = try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 	return err
 }
 
 func errTry1_inlineHandler() (err error) {
 	defer err3.Handlef(&err, "handle top")
-	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
-	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
-	_ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	_, err = throw()
+	try.Try(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	_, err = throw()
+	try.Try(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	_, err = throw()
+	try.Try(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	return err
 }
 
@@ -122,17 +139,22 @@ func noErr() error {
 }
 
 func TestTry_noError(t *testing.T) {
-	try.Check1(noThrow())
-	try.Check2(twoStrNoThrow())
-	try.Check2(intStrNoThrow())
-	try.Check3(boolIntStrNoThrow())
+	_, err := noThrow()
+	try.Check(err)
+	_, _, err = twoStrNoThrow()
+	try.Check(err)
+	_, _, err = intStrNoThrow()
+	try.Check(err)
+	_, _, _, err = boolIntStrNoThrow()
+	try.Check(err)
 }
 
 func TestDefault_Error(t *testing.T) {
 	var err error
 	defer err3.Handle(&err, nil)
 
-	try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 
 	t.Fail() // If everything works we are newer here
 }
@@ -141,7 +163,8 @@ func TestTry_Error(t *testing.T) {
 	var err error
 	defer err3.Handle(&err, nil)
 
-	try.Check1(throw())
+	_, err = throw()
+	try.Check(err)
 
 	t.Fail() // If everything works we are newer here
 }
@@ -363,7 +386,8 @@ func TestCatch_Error(t *testing.T) {
 		//fmt.Printf("error and defer handling:%s\n", err)
 	})
 
-	try.Check1(throw())
+	_, err := throw()
+	try.Check(err)
 
 	t.Fail() // If everything works we are newer here
 }
@@ -374,15 +398,18 @@ func Example_copyFile() {
 
 		// These try.To() checkers are as fast as `if err != nil {}`
 
-		r := try.Check1(os.Open(src))
+		r, err := os.Open(src)
+		try.Check(err)
 		defer r.Close()
 
 		rmFile := try.Cleanup(func() {
 			os.Remove(dst)
 		})
-		w := try.Try1(os.Create(dst))(rmFile)
+		w, err := os.Create(dst)
+		try.Try(err, rmFile)
 		defer w.Close()
-		_ = try.Try1(io.Copy(w, r))(rmFile, try.Fmt("copy failure"))
+		_, err = io.Copy(w, r)
+		try.Try(err, rmFile, try.Fmt("copy failure"))
 		return nil
 	}
 
@@ -396,14 +423,16 @@ func Example_copyFile() {
 func ExampleHandle() {
 	var err error
 	defer err3.Handle(&err, nil)
-	try.Check1(noThrow())
+	_, err = noThrow()
+	try.Check(err)
 	// Output:
 }
 
 func ExampleHandlef() {
 	annotated := func() (err error) {
 		defer err3.Handlef(&err, "annotated")
-		try.Check1(throw())
+		_, err = throw()
+		try.Check(err)
 		return err
 	}
 	err := annotated()
@@ -414,7 +443,8 @@ func ExampleHandlef() {
 func ExampleHandlef_format_args() {
 	annotated := func() (err error) {
 		defer err3.Handlef(&err, "annotated: %s", "err3")
-		try.Check1(throw())
+		_, err = throw()
+		try.Check(err)
 		return err
 	}
 	err := annotated()
@@ -452,7 +482,8 @@ func ExampleHandlef_deferStack() {
 	annotated := func() (err error) {
 		defer err3.Handlef(&err, "3rd")
 		defer err3.Handlef(&err, "2nd")
-		_ = try.Try1(throw())(try.Fmt("1st"))
+		_, err = throw()
+		try.Try(err, try.Fmt("1st"))
 		return err
 	}
 	err := annotated()
@@ -465,7 +496,8 @@ func ExampleHandle_with_handler() {
 		defer err3.Handle(&err, func() error {
 			return fmt.Errorf("error with (%d, %d): %v", a, b, err)
 		})
-		try.Check1(throw())
+		_, err = throw()
+		try.Check(err)
 		return err
 	}
 	err := doSomething(1, 2)
@@ -508,7 +540,8 @@ func Benchmark_Err_Try1_Fmt(b *testing.B) {
 
 func Benchmark_NoErr_Check1(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_ = try.Check1(noThrow()) // a slight slow-down
+		_, err := noThrow() // a slight slow-dow
+		try.Check(err)
 	}
 }
 
@@ -521,7 +554,8 @@ func Benchmark_Noerr3_Check_NilErr(b *testing.B) {
 
 func Benchmark_NoErr_Check2(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_, _ = try.Check2(twoStrNoThrow())
+		_, _, err := twoStrNoThrow()
+		try.Check(err)
 	}
 }
 

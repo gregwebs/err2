@@ -16,15 +16,18 @@ func Example_copyFile() {
 		// These try package helpers are as fast as Check() calls which is as
 		// fast as `if err != nil {}`
 
-		r := try.Check1(os.Open(src))
+		r, err := os.Open(src)
+		try.Check(err)
 		defer r.Close()
 
-		w := try.Check1(os.Create(dst))
+		w, err := os.Create(dst)
+		try.Check(err)
 		defer err3.HandleCleanup(&err, func() {
 			os.Remove(dst)
 		})
 		defer w.Close()
-		try.Check1(io.Copy(w, r))
+		_, err = io.Copy(w, r)
+		try.Check(err)
 		return nil
 	}
 
@@ -42,15 +45,18 @@ func Example_copyFile_try() {
 		// These try package helpers are as fast as Check() calls which is as
 		// fast as `if err != nil {}`
 
-		r := try.Check1(os.Open(src))
+		r, err := os.Open(src)
+		try.Check(err)
 		defer r.Close()
 
-		w := try.Try1(os.Create(dst))(func(err error) error {
+		w, err := os.Create(dst)
+		try.Try(err, func(err error) error {
 			os.Remove(dst)
 			return err
 		})
 		defer w.Close()
-		try.Check1(io.Copy(w, r))
+		_, err = io.Copy(w, r)
+		try.Check(err)
 		return nil
 	}
 
