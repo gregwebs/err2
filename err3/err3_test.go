@@ -169,7 +169,7 @@ func TestTry_Error(t *testing.T) {
 	t.Fail() // If everything works we are newer here
 }
 
-func TestPanickingCatchAll(t *testing.T) {
+func TestPanickingCatchHandlePanic(t *testing.T) {
 	type args struct {
 		f func()
 	}
@@ -181,7 +181,7 @@ func TestPanickingCatchAll(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err3.CatchAll(func(err error) {}, func(v any) {})
+					defer err3.CatchHandlePanic(func(err error) {}, func(v any) {})
 					panic("panic")
 				},
 			},
@@ -190,7 +190,7 @@ func TestPanickingCatchAll(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err3.CatchAll(func(err error) {}, func(v any) {})
+					defer err3.CatchHandlePanic(func(err error) {}, func(v any) {})
 					var b []byte
 					b[0] = 0
 				},
@@ -218,28 +218,25 @@ func TestPanickingCatchTrace(t *testing.T) {
 		f func()
 	}
 	tests := []struct {
-		name  string
-		args  args
-		wants error
+		name string
+		args args
 	}{
 		{"general panic",
 			args{
 				func() {
-					defer err3.CatchAll(noError, noPanic)
+					defer err3.CatchHandlePanic(noError, noPanic)
 					panic("panic")
 				},
 			},
-			nil,
 		},
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err3.CatchAll(noError, noPanic)
+					defer err3.CatchHandlePanic(noError, noPanic)
 					var b []byte
 					b[0] = 0
 				},
 			},
-			nil,
 		},
 	}
 	for _, tt := range tests {
@@ -254,87 +251,140 @@ func TestPanickingCatchTrace(t *testing.T) {
 	}
 }
 
-func TestPanickingCarryOn_Handle(t *testing.T) {
+func TestPanicking_Handle(t *testing.T) {
 	type args struct {
-		f func()
+		f func() error
 	}
 	tests := []struct {
-		name  string
-		args  args
-		wants error
+		name string
+		args args
 	}{
 		{"general panic",
 			args{
-				func() {
-					var err error
+				func() (err error) {
+					defer func() {
+						if err == nil {
+							t.Errorf("err is nil")
+						}
+					}()
 					defer err3.Handle(&err, nil)
 					panic("panic")
 				},
 			},
-			nil,
 		},
 		{"runtime.error panic",
 			args{
-				func() {
-					var err error
+				func() (err error) {
 					defer err3.Handle(&err, nil)
 					var b []byte
 					b[0] = 0
+					return nil
 				},
 			},
-			nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				if recover() == nil {
-					t.Error("panics should went thru when not our errors")
+				if recover() != nil {
+					t.Error("panics should be caught and returned as errors")
 				}
 			}()
-			tt.args.f()
+			if err := tt.args.f(); err == nil {
+				t.Error("panics should be caught and returned as errors")
+			}
 		})
 	}
 }
 
-func TestPanicking_Return(t *testing.T) {
+func TestPanicking_Handlef(t *testing.T) {
 	type args struct {
-		f func()
+		f func() error
 	}
 	tests := []struct {
-		name  string
-		args  args
-		wants error
+		name string
+		args args
 	}{
 		{"general panic",
 			args{
-				func() {
-					var err error
-					defer err3.Handle(&err, nil)
+				func() (err error) {
+					defer func() {
+						if err == nil {
+							t.Errorf("err is nil")
+						}
+					}()
+					defer err3.Handlef(&err, "handlef")
 					panic("panic")
 				},
 			},
-			nil,
 		},
 		{"runtime.error panic",
 			args{
-				func() {
-					var err error
-					defer err3.Handle(&err, nil)
+				func() (err error) {
+					defer err3.Handlef(&err, "Handlef")
 					var b []byte
 					b[0] = 0
+					return nil
 				},
 			},
-			nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				if recover() == nil {
-					t.Error("panics should carry on")
+				if recover() != nil {
+					t.Error("panics should be caught and returned as errors")
 				}
 			}()
+			if err := tt.args.f(); err == nil {
+				t.Error("panics should be caught and returned as errors")
+			}
+		})
+	}
+}
+
+func TestPanicking_Handlew(t *testing.T) {
+	type args struct {
+		f func() error
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"general panic",
+			args{
+				func() (err error) {
+					defer func() {
+						if err == nil {
+							t.Errorf("err is nil")
+						}
+					}()
+					defer err3.Handlew(&err, "handlew")
+					panic("panic")
+				},
+			},
+		},
+		{"runtime.error panic",
+			args{
+				func() (err error) {
+					defer err3.Handlew(&err, "Handlew")
+					var b []byte
+					b[0] = 0
+					return nil
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if recover() != nil {
+					t.Error("panics should be caught and returned as errors")
+				}
+			}()
+			if err := tt.args.f(); err == nil {
+				t.Error("panics should be caught and returned as errors")
+			}
 			tt.args.f()
 		})
 	}
@@ -381,15 +431,15 @@ func TestPanicking_Catch(t *testing.T) {
 	}
 }
 
-func TestCatch_Error(t *testing.T) {
-	defer err3.CatchError(func(err error) {
+func TestCatch_All(t *testing.T) {
+	defer err3.CatchAll(func(err error) {
 		//fmt.Printf("error and defer handling:%s\n", err)
 	})
 
 	_, err := throw()
 	try.Check(err)
 
-	t.Fail() // If everything works we are newer here
+	t.Fail() // If everything works we are never here
 }
 
 func Example_copyFile() {

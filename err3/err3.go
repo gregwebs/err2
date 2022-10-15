@@ -3,6 +3,8 @@ package err3
 import (
 	"fmt"
 	"runtime"
+
+	"github.com/gregwebs/errors"
 )
 
 // Handle handles any errors with a given handler function
@@ -16,6 +18,7 @@ import (
 // errors, there are a CatchXxxx functions. The handler is called only when err
 // != nil. There is no limit how many Handle functions can be added to defer
 // stack. They all are called if an error has occurred and they are in deferred.
+// This function will convert panics to errors
 func Handle(err *error, handlerFn func() error) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
@@ -24,6 +27,7 @@ func Handle(err *error, handlerFn func() error) {
 
 // HandleCleanup is a convenience function for using a handler that does not return an error.
 // Must be used as a `defer`.
+// This function will convert panics to errors
 func HandleCleanup(err *error, handlerFn func()) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
@@ -36,6 +40,7 @@ func HandleCleanup(err *error, handlerFn func()) {
 // Handlef is for handling errors by annotating them with a format string.
 // Must be used as a `defer`.
 // It appends ": %v" to the format string
+// This function will convert panics to errors
 func Handlef(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
@@ -45,12 +50,14 @@ func Handlef(err *error, prefix string, args ...any) {
 // Handlew is for annotating an error.
 // Must be used as a `defer`.
 // It appends ": %w" to the format string
+// This function will convert panics to errors
 func Handlew(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	formatHandler(r, err, prefix+": %w", args...)
 }
 
+// This function will convert panics to errors
 func formatHandler(r any, err *error, format string, args ...any) {
 	handleRecover(r, err, func() error {
 		args = append(args, *err)
@@ -58,37 +65,39 @@ func formatHandler(r any, err *error, format string, args ...any) {
 	})
 }
 
+// This function will convert panics to errors
 func handleRecover(r any, err *error, handlerFn func() error) {
 	// Call the handlerFn if possible if the recovery is not nil
 	// If a non-runtime error, use the error and don't panic
 	// Otherwise panic again.
-	shouldPanic := true
 	switch r := r.(type) {
 	case runtime.Error:
-		// A normal Go panic
+		// A Go panic
+		// Convert to an error that has the stack trace
+		// Overwrite err: it should be unset unless there was an error during error handling
+		*err = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
 	case error:
-		// A try.CheckX or try.TryX threw an error
+		// try.Check or try.Try threw an error
 		// assert *err == nil
 		*err = r
-		shouldPanic = false
 	case nil:
 		// There are multiple Handle* functions.
 		// One already dealt with the error
-		shouldPanic = false
+	default:
+		// A Go panic
+		*err = errors.AddStack(errors.New(fmt.Sprintf("%v", r)))
 	}
 	if handlerFn != nil && *err != nil {
 		if newErr := handlerFn(); newErr != nil {
 			*err = newErr
 		}
 	}
-	if shouldPanic {
-		panic(r)
-	}
 }
 
-// CatchError can be used in a function that does not return an error
+// CatchAll can be used in a function that does not return an error.
 // Must be used with defer
-func CatchError(handlerFn func(error)) {
+// Converts a panic to an error
+func CatchAll(handlerFn func(error)) {
 	r := recover()
 	var err error
 	handleRecover(r, &err, func() error {
@@ -97,18 +106,32 @@ func CatchError(handlerFn func(error)) {
 	})
 }
 
-// CatchAll can be used in a function that does not return an error
+// CatchHandlePanic can be used in a function that does not return an error
 // Must be used with defer
 //
-// CatchAll stops panics and gives the panic to the panicHandler
+// CatchHandlePanic stops panics and gives the panic to the panicHandler
 // It uses ErrorFromRecover to extract errors and give them to the errorHandler
-func CatchAll(errorHandler func(error), panicHandler func(v any)) {
+func CatchHandlePanic(errorHandler func(error), panicHandler func(v any)) {
 	r := recover()
+	if r == nil {
+		return
+	}
 	if err := ErrorFromRecover(r); err != nil {
 		errorHandler(err)
 	} else {
-		panicHandler(r)
+		if panicHandler == nil {
+			panic(r)
+		} else {
+			panicHandler(r)
+		}
 	}
+}
+
+// CatchError can be used in a function that does not return an error
+// Must be used with defer
+// Does not handle panics
+func CatchError(errorHandler func(error)) {
+	CatchHandlePanic(errorHandler, nil)
 }
 
 // ErrorFromRecover extracts a non-runtime error from the recovery object
