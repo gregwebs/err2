@@ -67,12 +67,14 @@ func handleRecover(r any, err *error, handlerFn func() error) {
 	// Call the handlerFn if possible if the recovery is not nil
 	// If a non-runtime error, use the error and don't panic
 	// Otherwise panic again.
+	var panicked error
 	switch r := r.(type) {
 	case runtime.Error:
 		// A Go panic
 		// Convert to an error that has the stack trace
 		// Overwrite err: it should be unset unless there was an error during error handling
-		*err = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
+		panicked = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
+		*err = panicked
 	case error:
 		// try.Check or try.Try threw an error
 		// assert *err == nil
@@ -82,11 +84,17 @@ func handleRecover(r any, err *error, handlerFn func() error) {
 		// One already dealt with the error
 	default:
 		// A Go panic
-		*err = errors.AddStack(errors.New(fmt.Sprintf("%v", r)))
+		panicked = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
+		*err = panicked
 	}
 	if handlerFn != nil && *err != nil {
 		if newErr := handlerFn(); newErr != nil {
-			*err = newErr
+			// Preserve a stack trace when panicking
+			if panicked != nil && errors.Unwrap(newErr) == nil {
+				*err = errors.Wrap(panicked, newErr.Error())
+			} else {
+				*err = newErr
+			}
 		}
 	}
 }
