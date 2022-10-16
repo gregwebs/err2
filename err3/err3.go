@@ -44,7 +44,10 @@ func HandleCleanup(err *error, handlerFn func()) {
 func Handlef(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
-	formatHandler(r, err, prefix+": %v", args...)
+	handleRecover(r, err, func() error {
+		args = append(args, *err)
+		return fmt.Errorf(prefix+": %v", args...)
+	})
 }
 
 // Handlew is for annotating an error.
@@ -54,14 +57,8 @@ func Handlef(err *error, prefix string, args ...any) {
 func Handlew(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
-	formatHandler(r, err, prefix+": %w", args...)
-}
-
-// This function will convert panics to errors
-func formatHandler(r any, err *error, format string, args ...any) {
 	handleRecover(r, err, func() error {
-		args = append(args, *err)
-		return fmt.Errorf(format, args...)
+		return errors.Wrapf(*err, prefix, args...)
 	})
 }
 
