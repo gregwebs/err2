@@ -23,7 +23,7 @@ For example, instead of
 ```go
 b, err := ioutil.ReadAll(r)
 if err != nil {
-        return err
+    return err
 }
 ...
 ```
@@ -43,22 +43,26 @@ These function require a deferred error handler at the top of the function.
 Every function which uses try for error-checking should have at least one deferred
 `try.Handle*` function. `try` propagates errors via a panic, and these functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
 
-This is the simplest form of `try.Handle*`.
-
 ```go
 func do() (err error) {
-	defer try.Handle(&err, nil)
+	defer try.Handlew(&err, "calling do")
 	...
 }
 ```
 
 There is also
-* `Handlew`: wrap the error with %w instead of %v
+* `Handlew`: annotate the error with a message and wrap it (like fmt.Errorf with %w)
+* `Handlef`: annotate the error with a message and wrap it (like fmt.Errorf with %v)
 * `Handle`: call a function with the error
 * `HandleCleanup`: call a cleanup function
 
-There are also helpers `CatchError`, `CatchAll`, and `ErrorFromRecovery` that are useful for catching errors and panics in functions that do not return errors. These are generally callbacks, goroutines, and main.
+There are also helpers `Catch*`, and `ErrorFromRecovery` that are useful for catching errors and panics in functions that do not return errors. These are generally callbacks, goroutines, and main.
 
+
+## Panic handling
+
+The handler functions will also annotate panics and then rethrow them.
+This behavior can be disabled by setting `AnnotatePanics = false`
 
 ## Structure
 
@@ -89,7 +93,7 @@ The original `err2` implements similar error handling mechanism as drafted in th
 [check/handle
 proposal](https://go.googlesource.com/proposal/+/master/design/go2draft-error-handling-overview.md).
 
-`try` encourages the single use of a `defer` statement at the top of the function and then using the `try.TryX` functions to explicitly declare the error handlers for a function, similar to this [new proposal](https://github.com/golang/go/issues/55026). 
+`try` encourages the single use of a `defer` statement at the top of the function and then using the `try.Try` functions to explicitly declare the error handlers for a function, similar to this [new proposal](https://github.com/golang/go/issues/55026). 
 
 The package accomplishes error handling internally by using `panic/recovery`, which is less than ideal.
 However, it works out well because:

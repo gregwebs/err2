@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gregwebs/try/assert"
@@ -96,7 +97,7 @@ func errTry1_Fmt() (err error) {
 }
 
 func errId(err error) error { return err }
-func empty() error          { return nil }
+func empty(_ error) error   { return nil }
 
 func errTry1_id() (err error) {
 	defer err3.Handlef(&err, "handle top")
@@ -252,6 +253,9 @@ func TestPanickingCatchTrace(t *testing.T) {
 }
 
 func TestPanicking_Handle(t *testing.T) {
+	annotate := func(err error) error {
+		return fmt.Errorf("annotate %v", err)
+	}
 	type args struct {
 		f func() error
 	}
@@ -267,15 +271,15 @@ func TestPanicking_Handle(t *testing.T) {
 							t.Errorf("err is nil")
 						}
 					}()
-					defer err3.Handle(&err, nil)
-					panic("panic")
+					defer err3.Handle(&err, annotate)
+					panic("general panic")
 				},
 			},
 		},
 		{"runtime.error panic",
 			args{
 				func() (err error) {
-					defer err3.Handle(&err, nil)
+					defer err3.Handle(&err, annotate)
 					var b []byte
 					b[0] = 0
 					return nil
@@ -286,9 +290,8 @@ func TestPanicking_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				if recover() != nil {
-					t.Error("panics should be caught and returned as errors")
-				}
+				r := recover()
+				assertRecoveredHandle(t, r, "annotate")
 			}()
 			if err := tt.args.f(); err == nil {
 				t.Error("panics should be caught and returned as errors")
@@ -314,14 +317,15 @@ func TestPanicking_Handlef(t *testing.T) {
 						}
 					}()
 					defer err3.Handlef(&err, "handlef")
-					panic("panic")
+					err3.AnnotatePanics = true
+					panic("general panic")
 				},
 			},
 		},
 		{"runtime.error panic",
 			args{
 				func() (err error) {
-					defer err3.Handlef(&err, "Handlef")
+					defer err3.Handlef(&err, "handlef")
 					var b []byte
 					b[0] = 0
 					return nil
@@ -332,14 +336,28 @@ func TestPanicking_Handlef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				if recover() != nil {
-					t.Error("panics should be caught and returned as errors")
-				}
+				r := recover()
+				assertRecoveredHandle(t, r, "handlef")
 			}()
 			if err := tt.args.f(); err == nil {
 				t.Error("panics should be caught and returned as errors")
 			}
 		})
+	}
+}
+
+func assertRecoveredHandle(t *testing.T, r any, panicMsg string) {
+	t.Helper()
+	if r == nil {
+		t.Error("panics should be re-thrown")
+	}
+	err, ok := r.(err3.PanicAnnotated)
+	if !ok {
+		t.Errorf("expected panic to be re-thrown as PanicAnnotated")
+	}
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, panicMsg) {
+		t.Errorf("expected the handler message %s in the Error(), got %v", panicMsg, errMsg)
 	}
 }
 
@@ -367,7 +385,7 @@ func TestPanicking_Handlew(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() (err error) {
-					defer err3.Handlew(&err, "Handlew")
+					defer err3.Handlew(&err, "handlew")
 					var b []byte
 					b[0] = 0
 					return nil
@@ -378,9 +396,8 @@ func TestPanicking_Handlew(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				if recover() != nil {
-					t.Error("panics should be caught and returned as errors")
-				}
+				r := recover()
+				assertRecoveredHandle(t, r, "handlew")
 			}()
 			if err := tt.args.f(); err == nil {
 				t.Error("panics should be caught and returned as errors")
@@ -543,7 +560,7 @@ func ExampleHandlef_deferStack() {
 
 func ExampleHandle_with_handler() {
 	doSomething := func(a, b int) (err error) {
-		defer err3.Handle(&err, func() error {
+		defer err3.Handle(&err, func(err error) error {
 			return fmt.Errorf("error with (%d, %d): %v", a, b, err)
 		})
 		_, err = throw()
