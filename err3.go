@@ -7,6 +7,8 @@ import (
 	"github.com/gregwebs/errors"
 )
 
+var CatchPanics bool = true
+
 // Handle handles any errors with a given handler function
 //
 // Every function using Try*/Check* must defer a Handle* function.
@@ -44,22 +46,36 @@ func HandleCleanup(err *error, handlerFn func()) {
 func Handlef(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
-	handleRecover(r, err, func() error {
-		args = append(args, *err)
-		return fmt.Errorf(prefix+": %v", args...)
-	})
+	if AddStackTrace {
+		handleRecover(r, err, func() error {
+			args = append(args, *err)
+			return errors.Errorf(prefix+": %v", args...)
+		})
+	} else {
+		handleRecover(r, err, func() error {
+			args = append(args, *err)
+			return fmt.Errorf(prefix+": %v", args...)
+		})
+	}
 }
 
 // Handlew is for annotating an error.
 // Must be used as a `defer`.
-// It appends ": %w" to the format string
+// It wraps the error with a message, similar to using "%w" in a format string
 // This function will convert panics to errors
 func Handlew(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
-	handleRecover(r, err, func() error {
-		return errors.Wrapf(*err, prefix, args...)
-	})
+	if AddStackTrace {
+		handleRecover(r, err, func() error {
+			return errors.Wrapf(*err, prefix, args...)
+		})
+	} else {
+		handleRecover(r, err, func() error {
+			args = append(args, *err)
+			return fmt.Errorf(prefix+": %w", args...)
+		})
+	}
 }
 
 // This function will convert panics to errors
@@ -73,8 +89,10 @@ func handleRecover(r any, err *error, handlerFn func() error) {
 		// A Go panic
 		// Convert to an error that has the stack trace
 		// Overwrite err: it should be unset unless there was an error during error handling
-		panicked = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
-		*err = panicked
+		if CatchPanics {
+			panicked = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
+			*err = panicked
+		}
 	case error:
 		// try.Check or try.Try threw an error
 		// assert *err == nil
@@ -84,9 +102,12 @@ func handleRecover(r any, err *error, handlerFn func() error) {
 		// One already dealt with the error
 	default:
 		// A Go panic
-		panicked = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
-		*err = panicked
+		if CatchPanics {
+			panicked = errors.AddStack(errors.New(fmt.Sprintf("%+v", r)))
+			*err = panicked
+		}
 	}
+
 	if handlerFn != nil && *err != nil {
 		if newErr := handlerFn(); newErr != nil {
 			// Preserve a stack trace when panicking
@@ -96,6 +117,10 @@ func handleRecover(r any, err *error, handlerFn func() error) {
 				*err = newErr
 			}
 		}
+	}
+
+	if !CatchPanics {
+		panic(r)
 	}
 }
 
