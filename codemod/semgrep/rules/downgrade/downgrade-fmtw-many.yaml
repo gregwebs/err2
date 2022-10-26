@@ -6,9 +6,9 @@ rules:
     downgrade from using try.Fmtw
   patterns:
     - pattern: |
-        try.Fmtw($MSG, $...FMT_ARGS)($ERR)
+        try.Fmtw("$MSG", $...FMT_ARGS)($ERR)
   fix: |
-    fmt.Errorf($MSG, $...FMT_ARGS, $ERR)
+    fmt.Errorf("$MSG: %w", $...FMT_ARGS, $ERR)
 
   severity: WARNING
 
