@@ -1,0 +1,14 @@
+rules:
+- id: downgrade-fmtw-1
+  languages:
+    - go
+  message: |
+    downgrade from using try.Fmtw
+  patterns:
+    - pattern: |
+        try.Fmtw($MSG)($ERR)
+  fix: |
+    fmt.Errorf($MSG, $ERR)
+
+  severity: WARNING
+
