@@ -86,13 +86,13 @@ func errHandlefOnly() (err error) {
 
 func errTry1_Fmt() (err error) {
 	defer err3.Handlef(&err, "handle top")
-	// _ = try.Try1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	// _ = try.Check1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_, err = throw()
-	try.Try(err, try.Fmt("handle error"))
+	try.Check(err, try.Fmt("handle error"))
 	_, err = throw()
-	try.Try(err, try.Fmt("handle error"))
+	try.Check(err, try.Fmt("handle error"))
 	_, err = throw()
-	try.Try(err, try.Fmt("handle error"))
+	try.Check(err, try.Fmt("handle error"))
 	return err
 }
 
@@ -102,11 +102,11 @@ func empty(_ error) error   { return nil }
 func errTry1_id() (err error) {
 	defer err3.Handlef(&err, "handle top")
 	_, err = throw()
-	try.Try(err, errId)
+	try.Check(err, errId)
 	_, err = throw()
-	try.Try(err, errId)
+	try.Check(err, errId)
 	_, err = throw()
-	try.Try(err, errId)
+	try.Check(err, errId)
 	return err
 }
 
@@ -127,11 +127,11 @@ func errHandle_Only() (err error) {
 func errTry1_inlineHandler() (err error) {
 	defer err3.Handlef(&err, "handle top")
 	_, err = throw()
-	try.Try(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	try.Check(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_, err = throw()
-	try.Try(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	try.Check(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_, err = throw()
-	try.Try(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
+	try.Check(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	return err
 }
 
@@ -473,10 +473,10 @@ func Example_copyFile() {
 			os.Remove(dst)
 		})
 		w, err := os.Create(dst)
-		try.Try(err, rmFile)
+		try.Check(err, rmFile)
 		defer w.Close()
 		_, err = io.Copy(w, r)
-		try.Try(err, rmFile, try.Fmt("copy failure"))
+		try.Check(err, rmFile, try.Fmt("copy failure"))
 		return nil
 	}
 
@@ -550,7 +550,7 @@ func ExampleHandlef_deferStack() {
 		defer err3.Handlef(&err, "3rd")
 		defer err3.Handlef(&err, "2nd")
 		_, err = throw()
-		try.Try(err, try.Fmt("1st"))
+		try.Check(err, try.Fmt("1st"))
 		return err
 	}
 	err := annotated()

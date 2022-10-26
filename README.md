@@ -1,12 +1,12 @@
 # Go try
 
-This Go package provides tools for compact and composeable error handling.
+This Go package provides tools for compact error and panic handling.
 Instead of the traditional:
 
 ``` go
 x, err := f()
 if err != nil {
-	return fmt.Sprintf("annotate %v", err)
+	return fmt.Sprintf("annotate: %w", err)
 }
 ```
 
@@ -14,10 +14,10 @@ You can write:
 
 ``` go
 x, err := f()
-try.Try(err, try.Fmt("annotate"))
+try.Checkw(err, "annotate")
 ```
 
-The functions `Check` and `Try` are used for checking and handling errors.
+The functions `Check*` are used for checking and handling errors.
 For example, instead of
 
 ```go
@@ -35,7 +35,7 @@ b, err := ioutil.ReadAll(r)
 try.Check(err)
 ```
 
-These function require a deferred error handler at the top of the function.
+These function do require a deferred error handler at the top of the function.
 
 
 ## Error handling
@@ -44,8 +44,8 @@ Every function which uses try for error-checking should have at least one deferr
 `try.Handle*` function. `try` propagates errors via a panic, and these functions recover the error. If this is ommitted, an error will panic up the stack until there is a recover.
 
 ```go
-func do() (err error) {
-	defer try.Handlew(&err, "calling do")
+func do(x int) (err error) {
+	defer try.Handlew(&err, "do %d", x)
 	...
 }
 ```
@@ -62,7 +62,9 @@ There are also helpers `Catch*`, and `ErrorFromRecovery` that are useful for cat
 ## Panic handling
 
 The handler functions will also annotate panics and then rethrow them.
-This behavior can be disabled by setting `AnnotatePanics = false`
+This unifies error and panic handling.
+This can sometimes make the difference between a panic being hard to debug to being easy.
+
 
 ## Fork
 
@@ -104,14 +106,13 @@ The following form introduces no overhead in all Go versions:
 
 ``` go
 x, err := f()
-try.Check(Err)
+try.Check(err)
 ```
 
 #### Settings for Automatic Stack Tracing and panic annotation
 
-By default, Try and Check will wrap the error so that it has a stack trace
+By default, `try.Check*` will wrap the error so that it has a stack trace
 This can be disabled by setting the `AddStackTrace = false`
-
 
 By default. `Handle*` will annotate panics as well.
 This can be disabled by setting `AnnotatePanics = false`

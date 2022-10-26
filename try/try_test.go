@@ -50,7 +50,7 @@ func Example_copyFile_try() {
 		defer r.Close()
 
 		w, err := os.Create(dst)
-		try.Try(err, func(err error) error {
+		try.Check(err, func(err error) error {
 			os.Remove(dst)
 			return err
 		})
