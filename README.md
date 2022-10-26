@@ -64,28 +64,22 @@ There are also helpers `Catch*`, and `ErrorFromRecovery` that are useful for cat
 The handler functions will also annotate panics and then rethrow them.
 This behavior can be disabled by setting `AnnotatePanics = false`
 
-## Structure
-
-try has the following package structure:
-- The top-level main package try can be imported as try which combines both the try/err3 and try/try packages
-- The `try/err3` package includes declarative error handling functions.
-- The `try/try` package offers error checking functions.
-- The `stackprint` package contains the original code from `err2` to help print stack traces
-- The `assert` package contains the original code from `err2` to help with assertions.
-
-
 ## Fork
 
 This is a fork of github.com/lainio/err2 with a different user facing API.
 Internally the panic/recovery mechanism of propagating errors is the same.
+Besides only returning errors and not passing through values, differences are:
 
-Tracing is handled differently.
-There is no automatic mechanism for printing panics, instead users should create
-their own standard way of doing this.
-Errors themselves are wrapped up with a stack trace that can be recovered
-and printed with "%+v".
-The original stack trace printing code is still available under the stackprint module.
+* Tracing is handled differently.
+* There is no automatic mechanism for printing panics, instead users should create
+their own standard way of doing this. The original stack trace printing code is still available under the stackprint module.
+* Errors themselves are wrapped up with a stack trace that can be recovered and printed with "%+v".
+* Panics are annotated by the `Handle*` functions
 
+
+## Trying it out
+
+There are scripts under the ./codemod directory (upgrade.sh and downgrade.sh) to automatically translate code to use `try` or to downgrade it back to the original error handling.
 
 ## Background
 
@@ -113,7 +107,22 @@ x, err := f()
 try.Check(Err)
 ```
 
-#### Automatic And Optimized Stack Tracing
+#### Settings for Automatic Stack Tracing and panic annotation
 
 By default, Try and Check will wrap the error so that it has a stack trace
 This can be disabled by setting the `AddStackTrace = false`
+
+
+By default. `Handle*` will annotate panics as well.
+This can be disabled by setting `AnnotatePanics = false`
+
+## Structure
+
+try has the following package structure:
+- The top-level main package try can be imported as try which combines both the try/err3 and try/try packages
+- The `try/err3` package includes declarative error handling functions.
+- The `try/try` package offers error checking functions.
+- The `stackprint` package contains the original code from `err2` to help print stack traces
+- The `assert` package contains the original code from `err2` to help with assertions.
+
+
