@@ -43,6 +43,8 @@ comby -in-place -config "$dir/comby/$RULE.toml" -f "$@"
 # Cannot implement in just one pass
 comby -in-place -config "$dir/comby/$RULE.toml" -f "$@"
 
+# TODO: don't know how to properly run git diff in the repo
+pushd "$1" 
 # Fix imports
-goimports -w "$@"
-gofmt -w "$@"
+git diff --name-only | xargs goimports -w 
+git diff --name-only | xargs gofmt -w
