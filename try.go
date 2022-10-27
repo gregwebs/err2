@@ -1,8 +1,10 @@
 /*
 Package try is a package for reducing error handling verbosity
 
-Instead of 'x, err := f(); if err != nil { return handler(err) }'
-One writes: 'x, err := f(); try.Try(err, handler)'
+Instead of 'x, err := f(); if err != nil { return nil, err }'
+One writes: 'x, err := f(); try.Check(err)'
+
+The main benefit is not having to write out zero values.
 
 If the error is not nil it is automatically thrown via panic.
 It is then caught by 'Handle' functions, which are required at the top of every function.
@@ -14,12 +16,12 @@ It is then caught by 'Handle' functions, which are required at the top of every 
 	  func do() (err error) {
 	    defer try.Handlew(&err, "do")
 
-	    x, err := f()
-	    try.Try(err, try.Fmtw("called f"))
+	    x, err := f(2)
+	    try.Checkw(err, "called f with %d", 2)
 	  }
 
-Package try is a package for try.Try and try.Check functions that implement the error
-checking. Additionally, there are helper functions for creating handlers: Fmtw, Fmt, and Cleanup
+Package try is a package for try.Check* functions that implement the error
+checking.
 */
 package try
 
@@ -31,20 +33,26 @@ import (
 
 var AddStackTrace bool = true
 
-func Fmtw(format string, args ...interface{}) func(error) error {
+func fmtw(format string, args ...interface{}) func(error) error {
 	return func(err error) error {
 		args = append(args, err)
 		return fmt.Errorf(format+": %w", args...)
 	}
 }
 
-func Fmt(format string, args ...interface{}) func(error) error {
+func fmtf(format string, args ...interface{}) func(error) error {
 	return func(err error) error {
 		args = append(args, err)
 		return fmt.Errorf(format+": %v", args...)
 	}
 }
 
+// A helper function for creating an error handler that performs a cleanup action
+// If you want the action to be run for any error, you can use try.HandleCleanup(&err, cleanup) instead.
+//
+//	rmFile := try.Cleanup(func() {
+//		os.Remove(dst)
+//	})
 func Cleanup(handler func()) func(error) error {
 	return func(err error) error {
 		handler()
@@ -98,11 +106,11 @@ func Check(err error, handlers ...func(error) error) {
 }
 
 func Checkw(err error, format string, args ...interface{}) {
-	Check(err, Fmtw(format, args...))
+	Check(err, fmtw(format, args...))
 }
 
 func Checkf(err error, format string, args ...interface{}) {
-	Check(err, Fmt(format, args...))
+	Check(err, fmtf(format, args...))
 }
 
 func CheckCleanup(err error, cleanupHandler func()) {
