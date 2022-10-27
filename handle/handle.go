@@ -1,4 +1,4 @@
-package err3
+package handle
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ var AddStackTrace bool = true
 // != nil. There is no limit how many Handle functions can be added to defer
 // stack. They all are called if an error has occurred and they are in deferred.
 // This function will convert panics to errors
-func Handle(err *error, handlerFn func(err error) error) {
+func Do(err *error, handlerFn func(err error) error) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	handleRecover(r, err, handlerFn)
@@ -31,7 +31,7 @@ func Handle(err *error, handlerFn func(err error) error) {
 // HandleCleanup is a convenience function for using a handler that does not return an error.
 // Must be used as a `defer`.
 // This function will convert panics to errors
-func HandleCleanup(err *error, handlerFn func()) {
+func Cleanup(err *error, handlerFn func()) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	handleRecover(r, err, func(_ error) error {
@@ -44,7 +44,7 @@ func HandleCleanup(err *error, handlerFn func()) {
 // Must be used as a `defer`.
 // It appends ": %v" to the format string
 // This function will convert panics to errors
-func Handlef(err *error, prefix string, args ...any) {
+func Format(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	if AddStackTrace {
@@ -64,7 +64,7 @@ func Handlef(err *error, prefix string, args ...any) {
 // Must be used as a `defer`.
 // It wraps the error with a message, similar to using "%w" in a format string
 // This function will convert panics to errors
-func Handlew(err *error, prefix string, args ...any) {
+func Wrap(err *error, prefix string, args ...any) {
 	// We need to call `recover` here because of how it works with defer.
 	r := recover()
 	if AddStackTrace {

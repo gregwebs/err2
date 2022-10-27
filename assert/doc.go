@@ -20,7 +20,7 @@ raise up quality of our software.
 
 The package offers a convenient way to set preconditions to code which allow us
 detect programming errors and API violations faster. Still allowing
-production-time error handling if needed. When used with the err3 package panics
+production-time error handling if needed. When used with the try package panics
 can be turned to normal Go's error values by using proper Asserter like P:
 
 	assert.P.True(s != "", "sub-command cannot be empty")
@@ -30,7 +30,7 @@ Please see the code examples for more information.
 Note. assert.That's performance is equal to the if-statement. Most of the
 generics-based versions are as fast, but some of them (Equal, SLen, MLen)
 aren't. If your algorithm is performance-critical please run `make bench` in the
-err3 repo and decide case by case.
+try repo and decide case by case.
 
 Note. Format string functions need to be own instances because of Go's vet and
 test tool integration.

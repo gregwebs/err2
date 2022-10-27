@@ -120,9 +120,9 @@ This can be disabled by setting `AnnotatePanics = false`
 ## Structure
 
 try has the following package structure:
-- The top-level main package try can be imported as try which combines both the try/err3 and try/try packages
-- The `try/err3` package includes declarative error handling functions.
-- The `try/try` package offers error checking functions.
+- The top-level main package try can be imported as try which combines both the try/handle and try/try packages
+- The `try/handle` package includes error recovery functions.
+- The `try/try` package offers error checking functions that return errors.
 - The `stackprint` package contains the original code from `err2` to help print stack traces
 - The `assert` package contains the original code from `err2` to help with assertions.
 

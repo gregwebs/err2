@@ -1,6 +1,6 @@
 # Original from github.com/pkg/errors
 
-PKG1 := github.com/gregwebs/try/err3
+PKG1 := github.com/gregwebs/try/handle
 PKG2 := github.com/gregwebs/try/assert
 PKG3 := github.com/gregwebs/try/try
 PKG4 := github.com/gregwebs/try/stackprint
@@ -48,5 +48,11 @@ godoc:
 	@GO111MODULE=off godoc -http=0.0.0.0:6060
 
 build:
-	cat err3/err3.go | sed 's|package err3|package try|' | grep -v 'var.*AddStackTrace' > err3.go
-	cp try/try.go .
+	cat handle/handle.go \
+	| grep -v 'var.*AddStackTrace' \
+	| sed 's|package handle|package try|' \
+	| sed 's|func Do|func Handle|' \
+	| sed 's|func Cleanup|func HandleCleanup|' \
+	| sed 's|func Format|func Handlef|' \
+	| sed 's|func Wrap|func Handlew|' > handle.go \
+	&& cp try/try.go .

@@ -9,17 +9,17 @@ import (
 
 var (
 	// P is a production Asserter that sets panic objects to errors which
-	// allows err3 handlers to catch them.
+	// allows handle handlers to catch them.
 	P = AsserterToError
 
 	// D is a development Asserter that sets panic objects to strings that
-	// doesn't by caught by err3 handlers.
+	// doesn't by caught by handle handlers.
 	D Asserter = AsserterDebug
 
 	// DefaultAsserter is a default asserter used for package-level functions
 	// like assert.That(). It is the same as the production asserter P, which
 	// treats assert failures as Go errors, but in addition to that, it formats
-	// the assertion message properly. Naturally, only if err3 handlers are
+	// the assertion message properly. Naturally, only if handle handlers are
 	// found in the call stack, these errors are caught.
 	//
 	// You are free to set it according to your current preferences. For

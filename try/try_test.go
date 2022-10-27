@@ -5,13 +5,13 @@ import (
 	"io"
 	"os"
 
-	"github.com/gregwebs/try/err3"
+	"github.com/gregwebs/try/handle"
 	"github.com/gregwebs/try/try"
 )
 
 func Example_copyFile() {
 	copyFile := func(src, dst string) (err error) {
-		defer err3.Handlef(&err, "copy %s %s", src, dst)
+		defer handle.Format(&err, "copy %s %s", src, dst)
 
 		// These try package helpers are as fast as Check() calls which is as
 		// fast as `if err != nil {}`
@@ -22,7 +22,7 @@ func Example_copyFile() {
 
 		w, err := os.Create(dst)
 		try.Check(err)
-		defer err3.HandleCleanup(&err, func() {
+		defer handle.Cleanup(&err, func() {
 			os.Remove(dst)
 		})
 		defer w.Close()
@@ -40,7 +40,7 @@ func Example_copyFile() {
 
 func Example_copyFile_try() {
 	copyFile := func(src, dst string) (err error) {
-		defer err3.Handlef(&err, "copy %s %s", src, dst)
+		defer handle.Format(&err, "copy %s %s", src, dst)
 
 		// These try package helpers are as fast as Check() calls which is as
 		// fast as `if err != nil {}`

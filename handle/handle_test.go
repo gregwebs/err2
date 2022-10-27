@@ -1,4 +1,4 @@
-package err3_test
+package handle_test
 
 import (
 	"fmt"
@@ -8,16 +8,16 @@ import (
 	"testing"
 
 	"github.com/gregwebs/try/assert"
-	"github.com/gregwebs/try/err3"
+	"github.com/gregwebs/try/handle"
 	"github.com/gregwebs/try/try"
 )
 
 type zeroStruct struct{}
 
 func TestZero(t *testing.T) {
-	assert.Equal(false, err3.Zero[bool]())
-	assert.That(nil == err3.Zero[interface{}](), "zero interface{}")
-	assert.Equal(zeroStruct{}, err3.Zero[zeroStruct](), "zero struct")
+	assert.Equal(false, handle.Zero[bool]())
+	assert.That(nil == handle.Zero[interface{}](), "zero interface{}")
+	assert.Equal(zeroStruct{}, handle.Zero[zeroStruct](), "zero struct")
 }
 
 func throw() (string, error) {
@@ -30,7 +30,7 @@ func boolIntStrNoThrow() (bool, int, string, error) { return true, 1, "test", ni
 func noThrow() (string, error)                      { return "test", nil }
 
 func recursion(a int) (r int, err error) {
-	defer err3.Handle(&err, nil)
+	defer handle.Do(&err, nil)
 
 	if a == 0 {
 		return 0, nil
@@ -71,21 +71,21 @@ func recursionWithErrorCheck(a int) (int, error) {
 }
 
 func errHandlefOnly() (err error) {
-	defer err3.Handlef(&err, "handle top")
-	defer err3.Handlef(&err, "handle error")
+	defer handle.Format(&err, "handle top")
+	defer handle.Format(&err, "handle error")
 	_, err = throw()
 	try.Check(err)
-	defer err3.Handlef(&err, "handle error")
+	defer handle.Format(&err, "handle error")
 	_, err = throw()
 	try.Check(err)
-	defer err3.Handlef(&err, "handle error")
+	defer handle.Format(&err, "handle error")
 	_, err = throw()
 	try.Check(err)
 	return err
 }
 
 func errTry1_Fmt() (err error) {
-	defer err3.Handlef(&err, "handle top")
+	defer handle.Format(&err, "handle top")
 	// _ = try.Check1(throw())(func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_, err = throw()
 	try.Checkf(err, "handle error")
@@ -100,7 +100,7 @@ func errId(err error) error { return err }
 func empty(_ error) error   { return nil }
 
 func errTry1_id() (err error) {
-	defer err3.Handlef(&err, "handle top")
+	defer handle.Format(&err, "handle top")
 	_, err = throw()
 	try.Check(err, errId)
 	_, err = throw()
@@ -111,21 +111,21 @@ func errTry1_id() (err error) {
 }
 
 func errHandle_Only() (err error) {
-	defer err3.Handlef(&err, "handle top")
-	defer err3.Handle(&err, empty)
+	defer handle.Format(&err, "handle top")
+	defer handle.Do(&err, empty)
 	_, err = throw()
 	try.Check(err)
-	defer err3.Handle(&err, empty)
+	defer handle.Do(&err, empty)
 	_, err = throw()
 	try.Check(err)
-	defer err3.Handle(&err, empty)
+	defer handle.Do(&err, empty)
 	_, err = throw()
 	try.Check(err)
 	return err
 }
 
 func errTry1_inlineHandler() (err error) {
-	defer err3.Handlef(&err, "handle top")
+	defer handle.Format(&err, "handle top")
 	_, err = throw()
 	try.Check(err, func(err error) error { return fmt.Errorf("handle error: %v", err) })
 	_, err = throw()
@@ -152,7 +152,7 @@ func TestTry_noError(t *testing.T) {
 
 func TestDefault_Error(t *testing.T) {
 	var err error
-	defer err3.Handle(&err, nil)
+	defer handle.Do(&err, nil)
 
 	_, err = throw()
 	try.Check(err)
@@ -162,7 +162,7 @@ func TestDefault_Error(t *testing.T) {
 
 func TestTry_Error(t *testing.T) {
 	var err error
-	defer err3.Handle(&err, nil)
+	defer handle.Do(&err, nil)
 
 	_, err = throw()
 	try.Check(err)
@@ -182,7 +182,7 @@ func TestPanickingCatchHandlePanic(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err3.CatchHandlePanic(func(err error) {}, func(v any) {})
+					defer handle.CatchHandlePanic(func(err error) {}, func(v any) {})
 					panic("panic")
 				},
 			},
@@ -191,7 +191,7 @@ func TestPanickingCatchHandlePanic(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err3.CatchHandlePanic(func(err error) {}, func(v any) {})
+					defer handle.CatchHandlePanic(func(err error) {}, func(v any) {})
 					var b []byte
 					b[0] = 0
 				},
@@ -225,7 +225,7 @@ func TestPanickingCatchTrace(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err3.CatchHandlePanic(noError, noPanic)
+					defer handle.CatchHandlePanic(noError, noPanic)
 					panic("panic")
 				},
 			},
@@ -233,7 +233,7 @@ func TestPanickingCatchTrace(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err3.CatchHandlePanic(noError, noPanic)
+					defer handle.CatchHandlePanic(noError, noPanic)
 					var b []byte
 					b[0] = 0
 				},
@@ -271,7 +271,7 @@ func TestPanicking_Handle(t *testing.T) {
 							t.Errorf("err is nil")
 						}
 					}()
-					defer err3.Handle(&err, annotate)
+					defer handle.Do(&err, annotate)
 					panic("general panic")
 				},
 			},
@@ -279,7 +279,7 @@ func TestPanicking_Handle(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() (err error) {
-					defer err3.Handle(&err, annotate)
+					defer handle.Do(&err, annotate)
 					var b []byte
 					b[0] = 0
 					return nil
@@ -316,8 +316,8 @@ func TestPanicking_Handlef(t *testing.T) {
 							t.Errorf("err is nil")
 						}
 					}()
-					defer err3.Handlef(&err, "handlef")
-					err3.AnnotatePanics = true
+					defer handle.Format(&err, "handlef")
+					handle.AnnotatePanics = true
 					panic("general panic")
 				},
 			},
@@ -325,7 +325,7 @@ func TestPanicking_Handlef(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() (err error) {
-					defer err3.Handlef(&err, "handlef")
+					defer handle.Format(&err, "handlef")
 					var b []byte
 					b[0] = 0
 					return nil
@@ -351,7 +351,7 @@ func assertRecoveredHandle(t *testing.T, r any, panicMsg string) {
 	if r == nil {
 		t.Error("panics should be re-thrown")
 	}
-	err, ok := r.(err3.PanicAnnotated)
+	err, ok := r.(handle.PanicAnnotated)
 	if !ok {
 		t.Errorf("expected panic to be re-thrown as PanicAnnotated")
 	}
@@ -377,7 +377,7 @@ func TestPanicking_Handlew(t *testing.T) {
 							t.Errorf("err is nil")
 						}
 					}()
-					defer err3.Handlew(&err, "handlew")
+					defer handle.Wrap(&err, "handlew")
 					panic("panic")
 				},
 			},
@@ -385,7 +385,7 @@ func TestPanicking_Handlew(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() (err error) {
-					defer err3.Handlew(&err, "handlew")
+					defer handle.Wrap(&err, "handlew")
 					var b []byte
 					b[0] = 0
 					return nil
@@ -419,7 +419,7 @@ func TestPanicking_Catch(t *testing.T) {
 		{"general panic",
 			args{
 				func() {
-					defer err3.CatchError(func(err error) {})
+					defer handle.CatchError(func(err error) {})
 					panic("panic")
 				},
 			},
@@ -428,7 +428,7 @@ func TestPanicking_Catch(t *testing.T) {
 		{"runtime.error panic",
 			args{
 				func() {
-					defer err3.CatchError(func(err error) {})
+					defer handle.CatchError(func(err error) {})
 					var b []byte
 					b[0] = 0
 				},
@@ -449,7 +449,7 @@ func TestPanicking_Catch(t *testing.T) {
 }
 
 func TestCatch_All(t *testing.T) {
-	defer err3.CatchAll(func(err error) {
+	defer handle.CatchAll(func(err error) {
 		//fmt.Printf("error and defer handling:%s\n", err)
 	})
 
@@ -461,7 +461,7 @@ func TestCatch_All(t *testing.T) {
 
 func Example_copyFile() {
 	copyFile := func(src, dst string) (err error) {
-		defer err3.Handlef(&err, "copy %s %s", src, dst)
+		defer handle.Format(&err, "copy %s %s", src, dst)
 
 		// These try.To() checkers are as fast as `if err != nil {}`
 
@@ -470,7 +470,7 @@ func Example_copyFile() {
 		defer r.Close()
 
 		w, err := os.Create(dst)
-		defer err3.HandleCleanup(&err, func() {
+		defer handle.Cleanup(&err, func() {
 			os.Remove(dst)
 		})
 		defer w.Close()
@@ -486,17 +486,17 @@ func Example_copyFile() {
 	// Output: copy /notfound/path/file.go /notfound/path/file.bak: open /notfound/path/file.go: no such file or directory
 }
 
-func ExampleHandle() {
+func ExampleDo() {
 	var err error
-	defer err3.Handle(&err, nil)
+	defer handle.Do(&err, nil)
 	_, err = noThrow()
 	try.Check(err)
 	// Output:
 }
 
-func ExampleHandlef() {
+func ExampleFormat() {
 	annotated := func() (err error) {
-		defer err3.Handlef(&err, "annotated")
+		defer handle.Format(&err, "annotated")
 		_, err = throw()
 		try.Check(err)
 		return err
@@ -506,19 +506,19 @@ func ExampleHandlef() {
 	// Output: annotated: this is an ERROR
 }
 
-func ExampleHandlef_format_args() {
+func ExampleFormat_format_args() {
 	annotated := func() (err error) {
-		defer err3.Handlef(&err, "annotated: %s", "err3")
+		defer handle.Format(&err, "annotated: %s", "handle")
 		_, err = throw()
 		try.Check(err)
 		return err
 	}
 	err := annotated()
 	fmt.Printf("%v", err)
-	// Output: annotated: err3: this is an ERROR
+	// Output: annotated: handle: this is an ERROR
 }
 
-func ExampleHandlef_panic() {
+func ExampleFormat_panic() {
 	type fn func(v int) int
 	var recursion fn
 	const recursionLimit = 77 // 12+11+10+9+8+7+6+5+4+3+2+1 = 78
@@ -533,7 +533,7 @@ func ExampleHandlef_panic() {
 	}
 
 	annotated := func() (err error) {
-		defer err3.Handlef(&err, "annotated: %s", "err3")
+		defer handle.Format(&err, "annotated: %s", "handle")
 
 		r := recursion(12) // call recursive algorithm successfully
 		recursion(r)       // call recursive algorithm unsuccessfully
@@ -541,13 +541,13 @@ func ExampleHandlef_panic() {
 	}
 	err := annotated()
 	fmt.Printf("%v", err)
-	// Output: annotated: err3: helper failed at: 78
+	// Output: annotated: handle: helper failed at: 78
 }
 
-func ExampleHandlef_deferStack() {
+func ExampleFormat_deferStack() {
 	annotated := func() (err error) {
-		defer err3.Handlef(&err, "3rd")
-		defer err3.Handlef(&err, "2nd")
+		defer handle.Format(&err, "3rd")
+		defer handle.Format(&err, "2nd")
 		_, err = throw()
 		try.Checkf(err, "1st")
 		return err
@@ -557,9 +557,9 @@ func ExampleHandlef_deferStack() {
 	// Output: 3rd: 2nd: 1st: this is an ERROR
 }
 
-func ExampleHandle_with_handler() {
+func ExampleDo_with_handler() {
 	doSomething := func(a, b int) (err error) {
-		defer err3.Handle(&err, func(err error) error {
+		defer handle.Do(&err, func(err error) error {
 			return fmt.Errorf("error with (%d, %d): %v", a, b, err)
 		})
 		_, err = throw()
@@ -611,7 +611,7 @@ func Benchmark_NoErr_Check1(b *testing.B) {
 	}
 }
 
-func Benchmark_Noerr3_Check_NilErr(b *testing.B) {
+func Benchmark_Nohandle_Check_NilErr(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		_, err := noThrow()
 		try.Check(err) // no slow-down
